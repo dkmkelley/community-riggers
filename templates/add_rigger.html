@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add Rigger</title>
+</head>
+
+<body>
+    <h1>Add Yourself to the Database</h1>
+
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST">
+        <label for="name">Full Name</label><br>
+        <input type="text" id="name" name="name" required><br><br>
+
+        <label for="phone">Phone Number</label><br>
+        <input type="text" id="phone" name="phone" required><br><br>
+
+        <label for="affiliation">Primary Local Affiliation</label><br>
+        <input type="text" id="affiliation" name="affiliation"><br><br>
+
+        <label for="city">City</label><br>
+        <input type="text" id="city" name="city"><br><br>
+
+        <button type="submit">Add Me</button>
+    </form>
+</body>
+</html>
