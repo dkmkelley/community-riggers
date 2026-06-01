@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rigger Directory</title>
+</head>
+
+<body>
+    <h1>Rigger Directory</h1>
+    <a href="/add">Add Yourself to the Directory</a>
+
+    {% if riggers %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Affiliation</th>
+                    <th>City</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rigger in riggers %}
+                <tr>
+                    <td>{{ rigger["name"] }}</td>
+                    <td>{{ rigger["phone"] }}</td>
+                    <td>{{ rigger["affiliation"] or "—" }}</td>
+                    <td>{{ rigger["city"] or "—" }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No riggers in the directory yet.</p>
+    {% endif %}
+</body>
+</html>

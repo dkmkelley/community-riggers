@@ -32,6 +32,13 @@ def add_rigger():
 
     return render_template("add_rigger.html")
 
+@app.route("/riggers")
+def list_riggers():
+    conn = get_db()
+    riggers = conn.execute("SELECT id, name, phone, affiliation, city FROM riggers ORDER BY name").fetchall()
+    conn.close()
+    return render_template("riggers.html", riggers=riggers)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
