@@ -7,3 +7,11 @@ CREATE TABLE IF NOT EXISTS riggers (
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE TABLE IF NOT EXISTS availability (
+    id          INTEGER PRIMARY KEY,
+    rigger_id   INTEGER NOT NULL,
+    date        TEXT NOT NULL,
+    FOREIGN KEY (rigger_id) REFERENCES riggers(id) ON DELETE CASCADE,
+    UNIQUE(rigger_id, date)
+);
