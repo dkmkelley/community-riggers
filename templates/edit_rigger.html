@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Rigger</title>
+</head>
+
+<body>
+    <h1>Edit Rigger</h1>
+
+    {% if error %}
+        <p style="color: red;">{{ error }}</p>
+    {% endif %}
+
+    <form method="POST">
+        <label for="name">Full Name</label><br>
+        <input type="text" id="name" name="name" value="{{ rigger['name'] }}" required><br><br>
+
+        <label for="phone">Phone Number</label><br>
+        <input type="text" id="phone" name="phone" value="{{ rigger['phone'] }}" required><br><br>
+
+        <label for="affiliation">Local Affiliation</label><br>
+        <input type="text" id="affiliation" name="affiliation" value="{{ rigger['affiliation'] or '' }}"><br><br>
+
+        <label for="city">City</label><br>
+        <input type="text" id="city" name="city" value="{{ rigger['city'] or '' }}"><br><br>
+
+        <button type="submit">Save Changes</button>
+        <a href="/riggers">Cancel</a>
+    </form>
+</body>
+</html>

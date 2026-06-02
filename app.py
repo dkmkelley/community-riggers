@@ -39,6 +39,39 @@ def list_riggers():
     conn.close()
     return render_template("riggers.html", riggers=riggers)
 
+@app.route("/riggers/<int:id>/edit", methods=["GET", "POST"])
+def edit_rigger(id):
+    conn = get_db()
+    rigger = conn.execute(
+        "SELECT * FROM riggers WHERE id = ?", (id,)).fetchone()
+
+    if rigger is None:
+        conn.close()
+        return "Rigger not found.", 404
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        phone = request.form.get("phone", "").strip()
+        affiliation = request.form.get("affiliation", "").strip()
+        city = request.form.get("city", "").strip()
+
+        if not name or not phone:
+            conn.close()
+            return render_template("edit_rigger.html", rigger=rigger, error="Name and phone are required.")
+
+        conn.execute(
+            """UPDATE riggers
+               SET name = ?, phone = ?, affiliation = ?, city = ?, updated_at = datetime('now')
+               WHERE id = ?""",
+            (name, phone, affiliation or None, city or None, id)
+        )
+        conn.commit()
+        conn.close()
+        return redirect(url_for("list_riggers"))
+
+    conn.close()
+    return render_template("edit_rigger.html", rigger=rigger)
+
 
 if __name__ == "__main__":
     app.run(debug=True)

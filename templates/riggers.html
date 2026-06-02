@@ -19,6 +19,7 @@
                     <th>Phone</th>
                     <th>Affiliation</th>
                     <th>City</th>
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -28,6 +29,7 @@
                     <td>{{ rigger["phone"] }}</td>
                     <td>{{ rigger["affiliation"] or "—" }}</td>
                     <td>{{ rigger["city"] or "—" }}</td>
+                    <td><a href="/riggers/{{ rigger['id'] }}/edit">Edit</a></td>
                 </tr>
                 {% endfor %}
             </tbody>
