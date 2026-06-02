@@ -6,7 +6,7 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Community Riggers is running."
+    return redirect(url_for("list_riggers"))
 
 
 @app.route("/add", methods=["GET", "POST"])
@@ -72,6 +72,26 @@ def edit_rigger(id):
     conn.close()
     return render_template("edit_rigger.html", rigger=rigger)
 
+
+@app.route("/riggers/<int:id>/delete", methods=["GET", "POST"])
+def delete_rigger(id):
+    conn = get_db()
+    rigger = conn.execute(
+        "SELECT * FROM riggers WHERE id = ?", (id,)
+    ).fetchone()
+
+    if rigger is None:
+        conn.close()
+        return "Rigger not found.", 404
+
+    if request.method == "POST":
+        conn.execute("DELETE FROM riggers WHERE id = ?", (id,))
+        conn.commit()
+        conn.close()
+        return redirect(url_for("list_riggers"))
+
+    conn.close()
+    return render_template("delete_rigger.html", rigger=rigger)
 
 if __name__ == "__main__":
     app.run(debug=True)

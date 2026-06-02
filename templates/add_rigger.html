@@ -1,34 +1,40 @@
-<!DOCTYPE html>
+{% extends "base.html" %}
 
-<html lang="en">
+{% block title %}Add Yourself | Community Riggers{% endblock %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Rigger</title>
-</head>
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h1 class="mb-4">Add Yourself to the Directory</h1>
 
-<body>
-    <h1>Add Yourself to the Database</h1>
+        {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
 
-    {% if error %}
-        <p style="color: red;">{{ error }}</p>
-    {% endif %}
+        <form method="POST">
+            <div class="mb-3">
+                <label for="name" class="form-label">Full Name</label>
+                <input type="text" id="name" name="name" class="form-control" required>
+            </div>
 
-    <form method="POST">
-        <label for="name">Full Name</label><br>
-        <input type="text" id="name" name="name" required><br><br>
+            <div class="mb-3">
+                <label for="phone" class="form-label">Phone Number</label>
+                <input type="text" id="phone" name="phone" class="form-control" required>
+            </div>
 
-        <label for="phone">Phone Number</label><br>
-        <input type="text" id="phone" name="phone" required><br><br>
+            <div class="mb-3">
+                <label for="affiliation" class="form-label">Local Affiliation</label>
+                <input type="text" id="affiliation" name="affiliation" class="form-control">
+            </div>
 
-        <label for="affiliation">Primary Local Affiliation</label><br>
-        <input type="text" id="affiliation" name="affiliation"><br><br>
+            <div class="mb-3">
+                <label for="city" class="form-label">City</label>
+                <input type="text" id="city" name="city" class="form-control">
+            </div>
 
-        <label for="city">City</label><br>
-        <input type="text" id="city" name="city"><br><br>
-
-        <button type="submit">Add Me</button>
-    </form>
-</body>
-</html>
+            <button type="submit" class="btn btn-success">Add Me</button>
+            <a href="/riggers" class="btn btn-outline-secondary ms-2">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

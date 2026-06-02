@@ -1,19 +1,17 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rigger Directory</title>
-</head>
+{% block title %}Directory | Community Riggers{% endblock %}
 
-<body>
-    <h1>Rigger Directory</h1>
-    <a href="/add">Add Yourself to the Directory</a>
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Rigger Directory</h1>
+    <a href="/add" class="btn btn-success">Add Yourself</a>
+</div>
 
-    {% if riggers %}
-        <table>
-            <thead>
+{% if riggers %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
                 <tr>
                     <th>Name</th>
                     <th>Phone</th>
@@ -29,13 +27,16 @@
                     <td>{{ rigger["phone"] }}</td>
                     <td>{{ rigger["affiliation"] or "—" }}</td>
                     <td>{{ rigger["city"] or "—" }}</td>
-                    <td><a href="/riggers/{{ rigger['id'] }}/edit">Edit</a></td>
+                    <td>
+                        <a href="/riggers/{{ rigger['id'] }}/edit" class="btn btn-outline-primary btn-sm">Edit</a>
+                        <a href="/riggers/{{ rigger['id'] }}/delete" class="btn btn-outline-danger btn-sm ms-1">Delete</a>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-    {% else %}
-        <p>No riggers in the directory yet.</p>
-    {% endif %}
-</body>
-</html>
+    </div>
+{% else %}
+    <div class="alert alert-info">No riggers in the directory yet.</div>
+{% endif %}
+{% endblock %}

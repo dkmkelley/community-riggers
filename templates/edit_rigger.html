@@ -1,34 +1,44 @@
-<!DOCTYPE html>
-<html lang="en">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Edit Rigger</title>
-</head>
+{% block title %}Edit Rigger | Community Riggers{% endblock %}
 
-<body>
-    <h1>Edit Rigger</h1>
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h1 class="mb-4">Edit Rigger</h1>
 
-    {% if error %}
-        <p style="color: red;">{{ error }}</p>
-    {% endif %}
+        {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
 
-    <form method="POST">
-        <label for="name">Full Name</label><br>
-        <input type="text" id="name" name="name" value="{{ rigger['name'] }}" required><br><br>
+        <form method="POST">
+            <div class="mb-3">
+                <label for="name" class="form-label">Full Name</label>
+                <input type="text" id="name" name="name" class="form-control"
+                       value="{{ rigger['name'] }}" required>
+            </div>
 
-        <label for="phone">Phone Number</label><br>
-        <input type="text" id="phone" name="phone" value="{{ rigger['phone'] }}" required><br><br>
+            <div class="mb-3">
+                <label for="phone" class="form-label">Phone Number</label>
+                <input type="text" id="phone" name="phone" class="form-control"
+                       value="{{ rigger['phone'] }}" required>
+            </div>
 
-        <label for="affiliation">Local Affiliation</label><br>
-        <input type="text" id="affiliation" name="affiliation" value="{{ rigger['affiliation'] or '' }}"><br><br>
+            <div class="mb-3">
+                <label for="affiliation" class="form-label">Local Affiliation</label>
+                <input type="text" id="affiliation" name="affiliation" class="form-control"
+                       value="{{ rigger['affiliation'] or '' }}">
+            </div>
 
-        <label for="city">City</label><br>
-        <input type="text" id="city" name="city" value="{{ rigger['city'] or '' }}"><br><br>
+            <div class="mb-3">
+                <label for="city" class="form-label">City</label>
+                <input type="text" id="city" name="city" class="form-control"
+                       value="{{ rigger['city'] or '' }}">
+            </div>
 
-        <button type="submit">Save Changes</button>
-        <a href="/riggers">Cancel</a>
-    </form>
-</body>
-</html>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="/riggers" class="btn btn-outline-secondary ms-2">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}
