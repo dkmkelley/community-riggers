@@ -1,12 +1,15 @@
 CREATE TABLE IF NOT EXISTS riggers (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    phone TEXT NOT NULL,
+    id          INTEGER PRIMARY KEY,
+    name        TEXT NOT NULL,
+    phone       TEXT NOT NULL,
     affiliation TEXT,
-    city TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    city        TEXT,
+    token       TEXT,
+    created_at  TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_riggers_token ON riggers(token);
 
 CREATE TABLE IF NOT EXISTS availability (
     id          INTEGER PRIMARY KEY,
