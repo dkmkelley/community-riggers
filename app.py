@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for
 from database import get_db, generate_token
+from datetime import date, timedelta
 
 app = Flask(__name__)
 
@@ -94,6 +95,81 @@ def delete_rigger(id):
 
     conn.close()
     return render_template("delete_rigger.html", rigger=rigger)
+
+@app.route("/availability/<token>", methods=["GET", "POST"])
+def availability(token):
+    conn = get_db()
+    rigger = conn.execute(
+        "SELECT * FROM riggers WHERE token = ?", (token,)
+    ).fetchone()
+
+    if rigger is None:
+        conn.close()
+        return "Invalid link.", 404
+
+    if request.method == "POST":
+        day = request.form.get("day")
+
+        if day == "today":
+            existing = conn.execute(
+                "SELECT id FROM availability WHERE rigger_id = ? AND date = date('now')",
+                (rigger["id"],)
+            ).fetchone()
+            if existing:
+                conn.execute(
+                    "DELETE FROM availability WHERE rigger_id = ? AND date = date('now')",
+                    (rigger["id"],)
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO availability (rigger_id, date) VALUES (?, date('now'))",
+                    (rigger["id"],)
+                )
+
+        elif day == "tomorrow":
+            existing = conn.execute(
+                "SELECT id FROM availability WHERE rigger_id = ? AND date = date('now', '+1 day')",
+                (rigger["id"],)
+            ).fetchone()
+            if existing:
+                conn.execute(
+                    "DELETE FROM availability WHERE rigger_id = ? AND date = date('now', '+1 day')",
+                    (rigger["id"],)
+                )
+            else:
+                conn.execute(
+                    "INSERT INTO availability (rigger_id, date) VALUES (?, date('now', '+1 day'))",
+                    (rigger["id"],)
+                )
+        else:
+            conn.close()
+            return "Invalid request.", 400
+
+        conn.commit()
+        conn.close()
+        return redirect(url_for("availability", token=token))
+
+    available_today = conn.execute(
+        "SELECT id FROM availability WHERE rigger_id = ? AND date = date('now')",
+        (rigger["id"],)
+    ).fetchone() is not None
+
+    available_tomorrow = conn.execute(
+        "SELECT id FROM availability WHERE rigger_id = ? AND date = date('now', '+1 day')",
+        (rigger["id"],)
+    ).fetchone() is not None
+
+    today_str = date.today().strftime("%B %d, %Y")
+    tomorrow_str = (date.today() + timedelta(days=1)).strftime("%B %d, %Y")
+
+    conn.close()
+    return render_template("availability.html",
+                           rigger=rigger,
+                           available_today=available_today,
+                           available_tomorrow=available_tomorrow,
+                           today_str=today_str,
+                           tomorrow_str=tomorrow_str)
+
 
 if __name__ == "__main__":
     app.run(debug=True)
