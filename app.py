@@ -108,67 +108,64 @@ def availability(token):
         return "Invalid link.", 404
 
     if request.method == "POST":
-        day = request.form.get("day")
-
-        if day == "today":
-            existing = conn.execute(
-                "SELECT id FROM availability WHERE rigger_id = ? AND date = date('now')",
-                (rigger["id"],)
-            ).fetchone()
-            if existing:
-                conn.execute(
-                    "DELETE FROM availability WHERE rigger_id = ? AND date = date('now')",
-                    (rigger["id"],)
-                )
-            else:
-                conn.execute(
-                    "INSERT INTO availability (rigger_id, date) VALUES (?, date('now'))",
-                    (rigger["id"],)
-                )
-
-        elif day == "tomorrow":
-            existing = conn.execute(
-                "SELECT id FROM availability WHERE rigger_id = ? AND date = date('now', '+1 day')",
-                (rigger["id"],)
-            ).fetchone()
-            if existing:
-                conn.execute(
-                    "DELETE FROM availability WHERE rigger_id = ? AND date = date('now', '+1 day')",
-                    (rigger["id"],)
-                )
-            else:
-                conn.execute(
-                    "INSERT INTO availability (rigger_id, date) VALUES (?, date('now', '+1 day'))",
-                    (rigger["id"],)
-                )
-        else:
+        try:
+            offset = int(request.form.get("day", -1))
+        except ValueError:
             conn.close()
             return "Invalid request.", 400
+
+        if offset not in range(5):
+            conn.close()
+            return "Invalid request.", 400
+
+        modifier = f"+{offset} days"
+        existing = conn.execute(
+            "SELECT id FROM availability WHERE rigger_id = ? AND date = date('now', ?)",
+            (rigger["id"], modifier)
+        ).fetchone()
+
+        if existing:
+            conn.execute(
+                "DELETE FROM availability WHERE rigger_id = ? AND date = date('now', ?)",
+                (rigger["id"], modifier)
+            )
+        else:
+            conn.execute(
+                "INSERT INTO availability (rigger_id, date) VALUES (?, date('now', ?))",
+                (rigger["id"], modifier)
+            )
 
         conn.commit()
         conn.close()
         return redirect(url_for("availability", token=token))
 
-    available_today = conn.execute(
-        "SELECT id FROM availability WHERE rigger_id = ? AND date = date('now')",
-        (rigger["id"],)
-    ).fetchone() is not None
+    days = []
+    for i in range(5):
+        modifier = f"+{i} days"
+        d = date.today() + timedelta(days=i)
+        available = conn.execute(
+            "SELECT id FROM availability WHERE rigger_id = ? AND date = date('now', ?)",
+            (rigger["id"], modifier)
+        ).fetchone() is not None
 
-    available_tomorrow = conn.execute(
-        "SELECT id FROM availability WHERE rigger_id = ? AND date = date('now', '+1 day')",
-        (rigger["id"],)
-    ).fetchone() is not None
+        if i == 0:
+            label = "Today"
+        elif i == 1:
+            label = "Tomorrow"
+        else:
+            label = d.strftime("%A")
 
-    today_str = date.today().strftime("%B %d, %Y")
-    tomorrow_str = (date.today() + timedelta(days=1)).strftime("%B %d, %Y")
+        days.append({
+            "offset": i,
+            "label": label,
+            "date_str": d.strftime("%B %d, %Y"),
+            "available": available
+        })
 
     conn.close()
     return render_template("availability.html",
                            rigger=rigger,
-                           available_today=available_today,
-                           available_tomorrow=available_tomorrow,
-                           today_str=today_str,
-                           tomorrow_str=tomorrow_str)
+                           days=days)
 
 
 if __name__ == "__main__":

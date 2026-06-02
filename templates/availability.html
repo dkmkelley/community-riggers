@@ -8,15 +8,16 @@
         <h1 class="mb-1">Hi, {{ rigger['name'] }}</h1>
         <p class="text-muted mb-4">Tap a button to toggle your availability.</p>
 
+        {% for day in days %}
         <div class="card mb-3">
             <div class="card-body d-flex justify-content-between align-items-center">
                 <div>
-                    <h5 class="mb-0">Today</h5>
-                    <small class="text-muted">{{ today_str }}</small>
+                    <h5 class="mb-0">{{ day.label }}</h5>
+                    <small class="text-muted">{{ day.date_str }}</small>
                 </div>
                 <form method="POST">
-                    <input type="hidden" name="day" value="today">
-                    {% if available_today %}
+                    <input type="hidden" name="day" value="{{ day.offset }}">
+                    {% if day.available %}
                         <button type="submit" class="btn btn-success">Available ✓</button>
                     {% else %}
                         <button type="submit" class="btn btn-outline-secondary">Not Available</button>
@@ -24,23 +25,8 @@
                 </form>
             </div>
         </div>
+        {% endfor %}
 
-        <div class="card mb-3">
-            <div class="card-body d-flex justify-content-between align-items-center">
-                <div>
-                    <h5 class="mb-0">Tomorrow</h5>
-                    <small class="text-muted">{{ tomorrow_str }}</small>
-                </div>
-                <form method="POST">
-                    <input type="hidden" name="day" value="tomorrow">
-                    {% if available_tomorrow %}
-                        <button type="submit" class="btn btn-success">Available ✓</button>
-                    {% else %}
-                        <button type="submit" class="btn btn-outline-secondary">Not Available</button>
-                    {% endif %}
-                </form>
-            </div>
-        </div>
     </div>
 </div>
 {% endblock %}
