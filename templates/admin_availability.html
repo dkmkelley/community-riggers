@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Admin | Community Riggers{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Availability</h1>
+    <small class="text-muted">Updates in real time as riggers toggle their status.</small>
+</div>
+
+{% if riggers %}
+<div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th>Name</th>
+                <th>Local</th>
+                <th>City</th>
+                {% for day in days %}
+                <th class="text-center">
+                    {{ day.label }}<br>
+                    <small class="fw-normal">{{ day.date_str }}</small>
+                </th>
+                {% endfor %}
+                <th>Contact</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for rigger in riggers %}
+            <tr>
+                <td>{{ rigger.name }}</td>
+                <td>{{ rigger.affiliation }}</td>
+                <td>{{ rigger.city }}</td>
+                {% for avail in rigger.availability %}
+                <td class="text-center">
+                    {% if avail %}
+                        <span class="badge bg-success">✓</span>
+                    {% else %}
+                        <span class="badge bg-secondary">—</span>
+                    {% endif %}
+                </td>
+                {% endfor %}
+                <td>
+                    <a href="tel:{{ rigger.phone }}" class="btn btn-outline-primary btn-sm">Call</a>
+                    <a href="sms:{{ rigger.phone }}" class="btn btn-outline-secondary btn-sm ms-1">Text</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="alert alert-info">No riggers in the directory yet.</div>
+{% endif %}
+{% endblock %}

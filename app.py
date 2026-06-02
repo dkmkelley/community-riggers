@@ -4,12 +4,12 @@ from datetime import date, timedelta
 
 app = Flask(__name__)
 
-
+# Default route. Redirects to the list of riggers
 @app.route("/")
 def home():
     return redirect(url_for("list_riggers"))
 
-
+# Route to add a new rigger
 @app.route("/add", methods=["GET", "POST"])
 def add_rigger():
     if request.method == "POST":
@@ -35,6 +35,8 @@ def add_rigger():
 
     return render_template("add_rigger.html")
 
+
+# Route to list all riggers
 @app.route("/riggers")
 def list_riggers():
     conn = get_db()
@@ -42,6 +44,7 @@ def list_riggers():
     conn.close()
     return render_template("riggers.html", riggers=riggers)
 
+# Route to edit a rigger's information
 @app.route("/riggers/<int:id>/edit", methods=["GET", "POST"])
 def edit_rigger(id):
     conn = get_db()
@@ -76,6 +79,7 @@ def edit_rigger(id):
     return render_template("edit_rigger.html", rigger=rigger)
 
 
+# Route to delete a rigger
 @app.route("/riggers/<int:id>/delete", methods=["GET", "POST"])
 def delete_rigger(id):
     conn = get_db()
@@ -96,6 +100,54 @@ def delete_rigger(id):
     conn.close()
     return render_template("delete_rigger.html", rigger=rigger)
 
+
+# Admin view to see all riggers and their availability for the next 5 days. Is public on dev server but should be protected in production.
+@app.route("/admin/availability")
+def admin_availability():
+    conn = get_db()
+
+    days = []
+    for i in range(5):
+        d = date.today() + timedelta(days=i)
+        if i == 0:
+            label = "Today"
+        elif i == 1:
+            label = "Tomorrow"
+        else:
+            label = d.strftime("%A")
+        days.append({
+            "label": label,
+            "date_str": d.strftime("%b %d")
+        })
+
+    rows = conn.execute("""
+        SELECT r.id, r.name, r.phone, r.affiliation, r.city,
+               MAX(CASE WHEN a.date = date('now') THEN 1 ELSE 0 END) as day_0,
+               MAX(CASE WHEN a.date = date('now', '+1 days') THEN 1 ELSE 0 END) as day_1,
+               MAX(CASE WHEN a.date = date('now', '+2 days') THEN 1 ELSE 0 END) as day_2,
+               MAX(CASE WHEN a.date = date('now', '+3 days') THEN 1 ELSE 0 END) as day_3,
+               MAX(CASE WHEN a.date = date('now', '+4 days') THEN 1 ELSE 0 END) as day_4
+        FROM riggers r
+        LEFT JOIN availability a ON a.rigger_id = r.id
+        GROUP BY r.id
+        ORDER BY r.name
+    """).fetchall()
+
+    riggers = []
+    for r in rows:
+        riggers.append({
+            "id": r["id"],
+            "name": r["name"],
+            "phone": r["phone"],
+            "affiliation": r["affiliation"] or "—",
+            "city": r["city"] or "—",
+            "availability": [r["day_0"], r["day_1"], r["day_2"], r["day_3"], r["day_4"]]
+        })
+
+    conn.close()
+    return render_template("admin_availability.html", riggers=riggers, days=days)
+
+# Route for riggers to set their availability for the next 5 days using a unique token link.
 @app.route("/availability/<token>", methods=["GET", "POST"])
 def availability(token):
     conn = get_db()
