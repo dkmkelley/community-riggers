@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, redirect, url_for
-from database import get_db
+from database import get_db, generate_token
 
 app = Flask(__name__)
 
@@ -19,11 +19,13 @@ def add_rigger():
 
         if not name or not phone:
             return render_template("add_rigger.html", error="Name and phone are required.")
+        
+        token = generate_token()
 
         conn = get_db()
         conn.execute(
-            "INSERT INTO riggers (name, phone, affiliation, city) VALUES (?, ?, ?, ?)",
-            (name, phone, affiliation or None, city or None)
+            "INSERT INTO riggers (name, phone, affiliation, city, token) VALUES (?, ?, ?, ?, ?)",
+            (name, phone, affiliation or None, city or None, token)
         )
         conn.commit()
         conn.close()
