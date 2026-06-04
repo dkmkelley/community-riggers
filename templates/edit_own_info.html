@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Update My Info | Community Riggers{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <h1 class="mb-4">Update My Information</h1>
+
+        {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST">
+            <div class="mb-3">
+                <label for="name" class="form-label">Full Name</label>
+                <input type="text" id="name" name="name" class="form-control"
+                       value="{{ rigger['name'] }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="phone" class="form-label">Phone Number</label>
+                <input type="text" id="phone" name="phone" class="form-control"
+                       value="{{ rigger['phone'] }}" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="affiliation" class="form-label">Local Affiliation</label>
+                <input type="text" id="affiliation" name="affiliation" class="form-control"
+                       value="{{ rigger['affiliation'] or '' }}">
+            </div>
+
+            <div class="mb-3">
+                <label for="city" class="form-label">City</label>
+                <input type="text" id="city" name="city" class="form-control"
+                       value="{{ rigger['city'] or '' }}">
+            </div>
+
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="/availability/{{ rigger['token'] }}" class="btn btn-outline-secondary ms-2">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

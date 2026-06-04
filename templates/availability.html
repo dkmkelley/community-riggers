@@ -5,8 +5,16 @@
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
-        <h1 class="mb-1">Hi, {{ rigger['name'] }}</h1>
-        <p class="text-muted mb-4">Tap a button to toggle your availability.</p>
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 class="mb-0">Hi, {{ rigger['name'] }}</h1>
+                <p class="text-muted mb-0">Tap a button to toggle your availability.</p>
+            </div>
+            <a href="/availability/{{ rigger['token'] }}/edit" class="btn btn-outline-secondary btn-sm">
+                Change Personal Info
+            </a>
+        </div>
 
         {% for day in days %}
         <div class="card mb-3">

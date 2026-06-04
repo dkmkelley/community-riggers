@@ -1,12 +1,42 @@
-from flask import Flask, render_template, request, redirect, url_for
-from database import get_db, generate_token
 from datetime import date, timedelta
+from functools import wraps
+import os
+
+from authlib.integrations.flask_client import OAuth
+from dotenv import load_dotenv
+from flask import Flask, render_template, request, redirect, url_for, session
+
+from database import get_db, generate_token
+
+load_dotenv()
 
 app = Flask(__name__)
+app.secret_key = os.getenv("AUTH0_SECRET")
+
+oauth = OAuth(app)
+oauth.register(
+    "auth0",
+    client_id=os.getenv("AUTH0_CLIENT_ID"),
+    client_secret=os.getenv("AUTH0_CLIENT_SECRET"),
+    client_kwargs={"scope": "openid profile email"},
+    server_metadata_url=f'https://{os.getenv("AUTH0_DOMAIN")}/.well-known/openid-configuration'
+)
 
 
-# Function to normalize phone numbers to a standard format (XXX) XXX-XXXX
-@app.template_filter('format_phone')
+def is_admin():
+    return session.get('user') is not None
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not is_admin():
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+# Filter function to normalize phone numbers to a standard format (XXX) XXX-XXXX
+@app.template_filter("format_phone")
 def format_phone(phone):
     if not phone:
         return "—"
@@ -17,14 +47,41 @@ def format_phone(phone):
         return f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
     return phone
 
-# Default route. Redirects to the list of riggers
+
+# Default route. Currently redirects to the list of riggers
 @app.route("/")
 def home():
     return redirect(url_for("list_riggers"))
 
 
+# auth0 login route
+@app.route("/login")
+def login():
+    return oauth.auth0.authorize_redirect(redirect_uri=url_for("callback", _external=True))
+
+
+# auth0 callback route
+@app.route("/callback")
+def callback():
+    token = oauth.auth0.authorize_access_token()
+    session["user"] = token
+    return redirect(url_for("admin_availability"))
+
+
+# auth0 logout route
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(
+        f'https://{os.getenv("AUTH0_DOMAIN")}/v2/logout?'
+        f'returnTo={url_for("home", _external=True)}&'
+        f'client_id={os.getenv("AUTH0_CLIENT_ID")}'
+    )
+
+
 # Route to list all riggers
 @app.route("/riggers")
+@admin_required
 def list_riggers():
     conn = get_db()
     riggers = conn.execute("SELECT id, name, phone, affiliation, city, token FROM riggers WHERE status = 'approved' ORDER BY name").fetchall()
@@ -69,6 +126,7 @@ def add_rigger():
 
 # Route to edit an existing rigger
 @app.route("/riggers/<int:id>/edit", methods=["GET", "POST"])
+@admin_required
 def edit_rigger(id):
     conn = get_db()
     rigger = conn.execute(
@@ -112,6 +170,7 @@ def edit_rigger(id):
 
 # Route to delete a rigger
 @app.route("/riggers/<int:id>/delete", methods=["GET", "POST"])
+@admin_required
 def delete_rigger(id):
     conn = get_db()
     rigger = conn.execute(
@@ -134,6 +193,7 @@ def delete_rigger(id):
 
 # Admin view to see all riggers and their availability for the next 5 days. Is public on dev server but should be protected in production.
 @app.route("/admin/availability")
+@admin_required
 def admin_availability():
     conn = get_db()
 
@@ -182,14 +242,17 @@ def admin_availability():
 
 # Admin view to see all riggers with status of 'pending'. Is public on dev server but should be protected in production.
 @app.route("/admin/pending")
+@admin_required
 def admin_pending():
     conn = get_db()
     riggers = conn.execute("SELECT * FROM riggers WHERE status = 'pending' ORDER BY created_at").fetchall()
     conn.close()
     return render_template("admin_pending.html", riggers=riggers)
 
+
 # Admin approval action to set a rigger's status to 'approved'. Is public on dev server but should be protected in production.
 @app.route("/admin/pending/<int:id>/approve", methods=["POST"])
+@admin_required
 def approve_rigger(id):
     conn = get_db()
     conn.execute(
@@ -203,12 +266,14 @@ def approve_rigger(id):
 
 # Admin rejection route. Also removes the rigger from the database. Is public on dev server but should be protected in production.
 @app.route("/admin/pending/<int:id>/reject", methods=["POST"])
+@admin_required
 def reject_rigger(id):
     conn = get_db()
     conn.execute("DELETE FROM riggers WHERE id = ?", (id,))
     conn.commit()
     conn.close()
     return redirect(url_for("admin_pending"))
+
 
 # Route for riggers to set their availability for the next 5 days using a unique token link.
 @app.route("/availability/<token>", methods=["GET", "POST"])
@@ -279,6 +344,57 @@ def availability(token):
     return render_template("availability.html",
                            rigger=rigger,
                            days=days)
+
+
+# Route for riggers to edit their own information using a unique token link. Separate from the admin edit route.
+
+@app.route("/availability/<token>/edit", methods=["GET", "POST"])
+def edit_own_info(token):
+    conn = get_db()
+    rigger = conn.execute(
+        "SELECT * FROM riggers WHERE token = ?", (token,)
+    ).fetchone()
+
+    if rigger is None:
+        conn.close()
+        return "Invalid link.", 404
+
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        phone = request.form.get("phone", "").strip()
+        affiliation = request.form.get("affiliation", "").strip()
+        city = request.form.get("city", "").strip()
+
+        if not name or not phone:
+            conn.close()
+            return render_template("edit_own_info.html", rigger=rigger,
+                                   error="Name and phone are required.")
+
+        digits = ''.join(filter(str.isdigit, phone))
+        if len(digits) == 10:
+            phone = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+        elif len(digits) == 11 and digits[0] == '1':
+            phone = f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
+        else:
+            return render_template("edit_own_info.html", rigger=rigger,
+                                   error="Please enter a valid 10-digit US phone number.")
+
+        conn.execute(
+            """UPDATE riggers
+               SET name = ?, phone = ?, affiliation = ?, city = ?, updated_at = datetime('now')
+               WHERE id = ?""",
+            (name, phone, affiliation or None, city or None, rigger["id"])
+        )
+        conn.commit()
+        conn.close()
+        return redirect(url_for("availability", token=token))
+
+    conn.close()
+    return render_template("edit_own_info.html", rigger=rigger)
+
+
+
+
 
 
 if __name__ == "__main__":
