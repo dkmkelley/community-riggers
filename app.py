@@ -4,10 +4,12 @@ from datetime import date, timedelta
 
 app = Flask(__name__)
 
+
 # Default route. Redirects to the list of riggers
 @app.route("/")
 def home():
     return redirect(url_for("list_riggers"))
+
 
 # Route to add a new rigger
 @app.route("/add", methods=["GET", "POST"])
@@ -40,9 +42,10 @@ def add_rigger():
 @app.route("/riggers")
 def list_riggers():
     conn = get_db()
-    riggers = conn.execute("SELECT id, name, phone, affiliation, city, token FROM riggers ORDER BY name").fetchall()
+    riggers = conn.execute("SELECT id, name, phone, affiliation, city, token FROM riggers WHERE status = 'approved' ORDER BY name").fetchall()
     conn.close()
     return render_template("riggers.html", riggers=riggers)
+
 
 # Route to edit a rigger's information
 @app.route("/riggers/<int:id>/edit", methods=["GET", "POST"])
@@ -129,6 +132,7 @@ def admin_availability():
                MAX(CASE WHEN a.date = date('now', '+4 days') THEN 1 ELSE 0 END) as day_4
         FROM riggers r
         LEFT JOIN availability a ON a.rigger_id = r.id
+        WHERE r.status = 'approved'
         GROUP BY r.id
         ORDER BY r.name
     """).fetchall()
@@ -147,13 +151,42 @@ def admin_availability():
     conn.close()
     return render_template("admin_availability.html", riggers=riggers, days=days)
 
+
+# Admin view to see all riggers with status of 'pending'. Is public on dev server but should be protected in production.
+@app.route("/admin/pending")
+def admin_pending():
+    conn = get_db()
+    riggers = conn.execute("SELECT * FROM riggers WHERE status = 'pending' ORDER BY created_at").fetchall()
+    conn.close()
+    return render_template("admin_pending.html", riggers=riggers)
+
+# Admin approval action to set a rigger's status to 'approved'. Is public on dev server but should be protected in production.
+@app.route("/admin/pending/<int:id>/approve", methods=["POST"])
+def approve_rigger(id):
+    conn = get_db()
+    conn.execute(
+        "UPDATE riggers SET status = 'approved', updated_at = datetime('now') WHERE id = ?",
+        (id,)
+    )
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin_pending"))
+
+
+# Admin rejection route. Also removes the rigger from the database. Is public on dev server but should be protected in production.
+@app.route("/admin/pending/<int:id>/reject", methods=["POST"])
+def reject_rigger(id):
+    conn = get_db()
+    conn.execute("DELETE FROM riggers WHERE id = ?", (id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for("admin_pending"))
+
 # Route for riggers to set their availability for the next 5 days using a unique token link.
 @app.route("/availability/<token>", methods=["GET", "POST"])
 def availability(token):
     conn = get_db()
-    rigger = conn.execute(
-        "SELECT * FROM riggers WHERE token = ?", (token,)
-    ).fetchone()
+    rigger = conn.execute("SELECT * FROM riggers WHERE token = ?", (token,)).fetchone()
 
     if rigger is None:
         conn.close()

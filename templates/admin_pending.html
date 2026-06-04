@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Pending Approvals | Community Riggers{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Pending Approvals</h1>
+    <a href="/admin/availability" class="btn btn-outline-secondary">Back to Availability</a>
+</div>
+
+{% if riggers %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead class="table-dark">
+                <tr>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Affiliation</th>
+                    <th>City</th>
+                    <th>Submitted</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rigger in riggers %}
+                <tr>
+                    <td>{{ rigger["name"] }}</td>
+                    <td>{{ rigger["phone"] }}</td>
+                    <td>{{ rigger["affiliation"] or "—" }}</td>
+                    <td>{{ rigger["city"] or "—" }}</td>
+                    <td>{{ rigger["created_at"] }}</td>
+                    <td>
+                        <form method="POST" action="/admin/pending/{{ rigger['id'] }}/approve"
+                              class="d-inline">
+                            <button type="submit" class="btn btn-success btn-sm">Approve</button>
+                        </form>
+                        <form method="POST" action="/admin/pending/{{ rigger['id'] }}/reject"
+                            class="d-inline ms-1"
+                            data-name="{{ rigger['name'] }}"
+                            onsubmit="return confirm('Reject and delete ' + this.dataset.name + '?')">
+                            <button type="submit" class="btn btn-danger btn-sm">Reject</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="alert alert-success">No pending approvals — you're all caught up.</div>
+{% endif %}
+{% endblock %}
