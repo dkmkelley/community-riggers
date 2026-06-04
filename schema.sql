@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS riggers (
     affiliation TEXT,
     city        TEXT,
     token       TEXT,
+    status      TEXT NOT NULL DEFAULT 'pending',
     created_at  TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at  TEXT NOT NULL DEFAULT (datetime('now'))
 );

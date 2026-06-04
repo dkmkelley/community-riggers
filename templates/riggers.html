@@ -17,6 +17,7 @@
                     <th>Phone</th>
                     <th>Affiliation</th>
                     <th>City</th>
+                    <th>Link</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -27,6 +28,12 @@
                     <td>{{ rigger["phone"] }}</td>
                     <td>{{ rigger["affiliation"] or "—" }}</td>
                     <td>{{ rigger["city"] or "—" }}</td>
+                    <td>
+                        <button class="btn btn-outline-secondary btn-sm copy-btn"
+                                data-url="{{ request.host_url }}availability/{{ rigger['token'] }}">
+                            Copy Link
+                        </button>
+                    </td>
                     <td>
                         <a href="/riggers/{{ rigger['id'] }}/edit" class="btn btn-outline-primary btn-sm">Edit</a>
                         <a href="/riggers/{{ rigger['id'] }}/delete" class="btn btn-outline-danger btn-sm ms-1">Delete</a>
@@ -39,4 +46,16 @@
 {% else %}
     <div class="alert alert-info">No riggers in the directory yet.</div>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.querySelectorAll('.copy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        navigator.clipboard.writeText(btn.dataset.url);
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy Link', 2000);
+    });
+});
+</script>
 {% endblock %}
