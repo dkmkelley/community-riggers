@@ -5,10 +5,31 @@ from datetime import date, timedelta
 app = Flask(__name__)
 
 
+# Function to normalize phone numbers to a standard format (XXX) XXX-XXXX
+@app.template_filter('format_phone')
+def format_phone(phone):
+    if not phone:
+        return "—"
+    digits = ''.join(filter(str.isdigit, phone))
+    if len(digits) == 10:
+        return f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+    elif len(digits) == 11 and digits[0] == '1':
+        return f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
+    return phone
+
 # Default route. Redirects to the list of riggers
 @app.route("/")
 def home():
     return redirect(url_for("list_riggers"))
+
+
+# Route to list all riggers
+@app.route("/riggers")
+def list_riggers():
+    conn = get_db()
+    riggers = conn.execute("SELECT id, name, phone, affiliation, city, token FROM riggers WHERE status = 'approved' ORDER BY name").fetchall()
+    conn.close()
+    return render_template("riggers.html", riggers=riggers)
 
 
 # Route to add a new rigger
@@ -23,6 +44,14 @@ def add_rigger():
         if not name or not phone:
             return render_template("add_rigger.html", error="Name and phone are required.")
         
+        digits = ''.join(filter(str.isdigit, phone))
+        if len(digits) == 10:
+            phone = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+        elif len(digits) == 11 and digits[0] == '1':
+            phone = f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
+        else:
+            return render_template("add_rigger.html", error="Please enter a valid 10-digit phone number.")
+
         token = generate_token()
 
         conn = get_db()
@@ -38,16 +67,7 @@ def add_rigger():
     return render_template("add_rigger.html")
 
 
-# Route to list all riggers
-@app.route("/riggers")
-def list_riggers():
-    conn = get_db()
-    riggers = conn.execute("SELECT id, name, phone, affiliation, city, token FROM riggers WHERE status = 'approved' ORDER BY name").fetchall()
-    conn.close()
-    return render_template("riggers.html", riggers=riggers)
-
-
-# Route to edit a rigger's information
+# Route to edit an existing rigger
 @app.route("/riggers/<int:id>/edit", methods=["GET", "POST"])
 def edit_rigger(id):
     conn = get_db()
@@ -67,6 +87,14 @@ def edit_rigger(id):
         if not name or not phone:
             conn.close()
             return render_template("edit_rigger.html", rigger=rigger, error="Name and phone are required.")
+        
+        digits = ''.join(filter(str.isdigit, phone))
+        if len(digits) == 10:
+            phone = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+        elif len(digits) == 11 and digits[0] == '1':
+            phone = f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
+        else:
+            return render_template("edit_rigger.html", rigger=rigger, error="Please enter a valid 10-digit phone number.")
 
         conn.execute(
             """UPDATE riggers
