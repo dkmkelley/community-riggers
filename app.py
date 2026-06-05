@@ -4,7 +4,7 @@ import os
 
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session, flash
 
 from database import get_db, generate_token
 
@@ -130,7 +130,16 @@ def add_rigger():
         conn.commit()
         conn.close()
 
-        return redirect(url_for("home"))
+        flash(f"Welcome, {name}! You've been added to the directory. "
+              " Your profile is pending admin approval and will appear in the directory shortly."
+              " Bookmark this page — it's your personal link for updating your availability. "
+              " There is no login information or password to remember, just the link."
+              " You can set your availability for the next 5 days using the buttons on this page."
+              " This system can only be useful if you keep your availability up to date:"
+              " If your availability changes, please update it."
+        )
+        
+        return redirect(url_for("availability", token=token))
 
     return render_template("add_rigger.html")
 
