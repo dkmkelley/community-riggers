@@ -250,14 +250,11 @@ def admin_availability():
         riggers.append({
             "id": r["id"],
             "name": r["name"],
-            "phone": r["phone"],
-            "affiliation": r["affiliation"] or "—",
-            "city": r["city"] or "—",
+            "phone": r["phone"],            
             "availability": [r["day_0"], r["day_1"], r["day_2"], r["day_3"], r["day_4"]]
         })
 
     conn.close()
-    print(f"DEBUG: {len(riggers)} riggers found for admin view")
     return render_template("admin_availability.html", riggers=riggers, days=days)
 
 

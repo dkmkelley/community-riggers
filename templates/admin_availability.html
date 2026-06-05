@@ -14,8 +14,7 @@
         <thead class="table-dark">
             <tr>
                 <th>Name</th>
-                <th>Local</th>
-                <th>City</th>
+                
                 {% for day in days %}
                 <th class="text-center">
                     {{ day.label }}<br>
@@ -29,8 +28,6 @@
             {% for rigger in riggers %}
             <tr>
                 <td>{{ rigger.name }}</td>
-                <td>{{ rigger.affiliation }}</td>
-                <td>{{ rigger.city }}</td>
                 {% for avail in rigger.availability %}
                 <td class="text-center">
                     {% if avail %}
