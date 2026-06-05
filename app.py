@@ -28,6 +28,7 @@ oauth.register(
 def is_admin():
     return session.get('user') is not None
 
+
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -92,6 +93,10 @@ def list_riggers():
     conn = get_db()
     riggers = conn.execute("SELECT id, name, phone, affiliation, city, token FROM riggers WHERE status = 'approved' ORDER BY name").fetchall()
     conn.close()
+    
+    print(f"DEBUG: {len(riggers)} riggers found")
+    for r in riggers:
+        print(f"DEBUG: {r['name']} - {r['status'] if 'status' in r.keys() else 'no status'}")
     return render_template("riggers.html", riggers=riggers)
 
 
@@ -243,6 +248,7 @@ def admin_availability():
         })
 
     conn.close()
+    print(f"DEBUG: {len(riggers)} riggers found for admin view")
     return render_template("admin_availability.html", riggers=riggers, days=days)
 
 
@@ -374,7 +380,7 @@ def edit_own_info(token):
         if not name or not phone:
             conn.close()
             return render_template("edit_own_info.html", rigger=rigger,
-                                   error="Name and phone are required.")
+                       error="Name and phone are required.", current_user=None)
 
         digits = ''.join(filter(str.isdigit, phone))
         if len(digits) == 10:
@@ -383,7 +389,7 @@ def edit_own_info(token):
             phone = f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
         else:
             return render_template("edit_own_info.html", rigger=rigger,
-                                   error="Please enter a valid 10-digit US phone number.")
+                       error="Please enter a valid 10-digit US phone number.", current_user=None)
 
         conn.execute(
             """UPDATE riggers
@@ -396,7 +402,7 @@ def edit_own_info(token):
         return redirect(url_for("availability", token=token))
 
     conn.close()
-    return render_template("edit_own_info.html", rigger=rigger)
+    return render_template("edit_own_info.html", rigger=rigger, current_user=None)
 
 
 
