@@ -270,6 +270,42 @@ def admin_pending():
     conn.close()
     return render_template("admin_pending.html", riggers=riggers)
 
+# Admin route to add a rigger on their behalf
+@app.route("/admin/add", methods=["GET", "POST"])
+@admin_required
+def admin_add_rigger():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        phone = request.form.get("phone", "").strip()
+        affiliation = request.form.get("affiliation", "").strip()
+        city = request.form.get("city", "").strip()
+
+        if not name or not phone:
+            return render_template("add_rigger.html", error="Name and phone are required.")
+
+        digits = ''.join(filter(str.isdigit, phone))
+        if len(digits) == 10:
+            phone = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+        elif len(digits) == 11 and digits[0] == '1':
+            phone = f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
+        else:
+            return render_template("add_rigger.html",
+                                   error="Please enter a valid 10-digit phone number.")
+
+        token = generate_token()
+
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO riggers (name, phone, affiliation, city, token) VALUES (?, ?, ?, ?, ?)",
+            (name, phone, affiliation or None, city or None, token)
+        )
+        conn.commit()
+        conn.close()
+
+        return redirect(url_for("admin_pending"))
+
+    return render_template("add_rigger.html")
+
 
 # Admin approval action to set a rigger's status to 'approved'. Is public on dev server but should be protected in production.
 @app.route("/admin/pending/<int:id>/approve", methods=["POST"])

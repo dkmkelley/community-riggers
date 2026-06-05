@@ -1,11 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Add Yourself | Community Riggers{% endblock %}
+{% block title %}
+    {% if current_user %}Add Rigger{% else %}Add Yourself{% endif %} | Community Riggers
+{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center">
     <div class="col-md-6">
-        <h1 class="mb-4">Add Yourself to the Directory</h1>
+        <h1 class="mb-4">
+            {% if current_user %}Add Rigger{% else %}Add Yourself to the Directory{% endif %}
+        </h1>
 
         {% if error %}
             <div class="alert alert-danger">{{ error }}</div>
@@ -32,8 +36,12 @@
                 <input type="text" id="city" name="city" class="form-control">
             </div>
 
-            <button type="submit" class="btn btn-success">Add Me</button>
-            <a href="/riggers" class="btn btn-outline-secondary ms-2">Cancel</a>
+            <button type="submit" class="btn btn-success">
+                {% if current_user %}Add Rigger{% else %}Add Yourself{% endif %}
+            </button>
+            {% if current_user %}
+                <a href="/riggers" class="btn btn-outline-secondary ms-2">Cancel</a>
+            {% endif %}
         </form>
     </div>
 </div>
