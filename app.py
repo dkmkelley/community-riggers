@@ -12,6 +12,8 @@ load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("AUTH0_SECRET")
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_COOKIE_SECURE'] = False
 
 oauth = OAuth(app)
 oauth.register(
@@ -33,6 +35,10 @@ def admin_required(f):
             return redirect(url_for('login'))
         return f(*args, **kwargs)
     return decorated_function
+
+@app.context_processor
+def inject_user():
+    return dict(current_user=session.get('user'))
 
 
 # Filter function to normalize phone numbers to a standard format (XXX) XXX-XXXX
