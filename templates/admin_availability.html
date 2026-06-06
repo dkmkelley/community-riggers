@@ -35,7 +35,9 @@
         <tbody>
             {% for rigger in riggers %}
             <tr>
-                <td><a href="/availability/{{ rigger.token }}">{{ rigger.name }}</a></td>
+                <td><a href="/availability/{{ rigger.token }}">{{ rigger.name }}</a>
+                    <div><small class="text-muted" style="font-size: 0.7rem;">Updated: {{ rigger.last_toggled_at }}</small></div>
+                </td>
                 {% for avail in rigger.availability %}
                 <td class="text-center">
                     {% if avail %}
