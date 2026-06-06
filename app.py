@@ -91,7 +91,10 @@ def logout():
 @admin_required
 def list_riggers():
     conn = get_db()
-    riggers = conn.execute("SELECT id, name, phone, affiliation, city, token FROM riggers WHERE status = 'approved' ORDER BY name").fetchall()
+    
+    riggers = conn.execute("SELECT id, name, phone, affiliation, city, token FROM riggers WHERE status = 'approved'"
+    ).fetchall()
+    riggers = sorted(riggers, key=lambda r: r['name'].split()[-1].lower())  # Sort by last name, case-insensitive
     conn.close()
     
     print(f"DEBUG: {len(riggers)} riggers found")
@@ -235,8 +238,7 @@ def admin_availability():
         LEFT JOIN availability a ON a.rigger_id = r.id
         WHERE r.status = 'approved'
         GROUP BY r.id
-        ORDER BY r.name
-    """).fetchall()
+        """).fetchall()
 
     riggers = []
     for r in rows:
@@ -247,6 +249,7 @@ def admin_availability():
             "availability": [r["day_0"], r["day_1"], r["day_2"], r["day_3"], r["day_4"]]
         })
 
+    riggers = sorted(riggers, key=lambda r: r['name'].split()[-1].lower()) # Sort by last name, case-insensitive
     conn.close()
     return render_template("admin_availability.html", riggers=riggers, days=days)
 
