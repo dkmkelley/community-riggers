@@ -29,8 +29,8 @@
                     <td>{{ rigger["city"] or "—" }}</td>
                     <td>
                         <div class="d-flex flex-column gap-1">
-                        <button class="btn btn-outline-secondary btn-sm copy-btn"
-                                data-url="{{ request.host_url }}availability/{{ rigger['token'] }}">Copy Link</button>                        
+                         <a href="sms:{{ rigger['phone'] }}?body=Here%20is%20your%20Community%20Riggers%20availability%20link%3A%20https%3A%2F%2Fwww.communityriggers.org%2Favailability%2F{{ rigger['token'] }}" 
+                        class="btn btn-outline-success btn-sm">Send Link</a>                       
                         <a href="/riggers/{{ rigger['id'] }}/edit" class="btn btn-outline-primary btn-sm">Edit</a>
                         <a href="/riggers/{{ rigger['id'] }}/delete" class="btn btn-outline-danger btn-sm">Delete</a>
                         </div>
@@ -46,6 +46,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<!--
 <script>
 document.querySelectorAll('.copy-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -55,4 +56,5 @@ document.querySelectorAll('.copy-btn').forEach(btn => {
     });
 });
 </script>
+-->
 {% endblock %}
