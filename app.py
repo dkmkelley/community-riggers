@@ -1,4 +1,6 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
+
 from functools import wraps
 import os
 
@@ -97,9 +99,6 @@ def list_riggers():
     riggers = sorted(riggers, key=lambda r: r['name'].split()[-1].lower())  # Sort by last name, case-insensitive
     conn.close()
     
-    print(f"DEBUG: {len(riggers)} riggers found")
-    for r in riggers:
-        print(f"DEBUG: {r['name']} - {r['status'] if 'status' in r.keys() else 'no status'}")
     return render_template("riggers.html", riggers=riggers)
 
 
@@ -244,12 +243,12 @@ def admin_availability():
     # If a date filter is applied, modify the query to only include riggers available on that date
     if date_filter:
         rows = conn.execute("""
-            SELECT r.id, r.name, r.phone, r.affiliation, r.city, r.token,
-                   MAX(CASE WHEN a.date = date('now') THEN 1 ELSE 0 END) as day_0,
-                   MAX(CASE WHEN a.date = date('now', '+1 days') THEN 1 ELSE 0 END) as day_1,
-                   MAX(CASE WHEN a.date = date('now', '+2 days') THEN 1 ELSE 0 END) as day_2,
-                   MAX(CASE WHEN a.date = date('now', '+3 days') THEN 1 ELSE 0 END) as day_3,
-                   MAX(CASE WHEN a.date = date('now', '+4 days') THEN 1 ELSE 0 END) as day_4
+            SELECT r.id, r.name, r.phone, r.affiliation, r.city, r.token, r.last_toggled_at,
+                MAX(CASE WHEN a.date = date('now') THEN 1 ELSE 0 END) as day_0,
+                MAX(CASE WHEN a.date = date('now', '+1 days') THEN 1 ELSE 0 END) as day_1,
+                MAX(CASE WHEN a.date = date('now', '+2 days') THEN 1 ELSE 0 END) as day_2,
+                MAX(CASE WHEN a.date = date('now', '+3 days') THEN 1 ELSE 0 END) as day_3,
+                MAX(CASE WHEN a.date = date('now', '+4 days') THEN 1 ELSE 0 END) as day_4
             FROM riggers r
             LEFT JOIN availability a ON a.rigger_id = r.id
             WHERE r.status = 'approved'
@@ -260,12 +259,12 @@ def admin_availability():
         """, (date_filter,)).fetchall()
     else:
         rows = conn.execute("""
-            SELECT r.id, r.name, r.phone, r.affiliation, r.city, r.token,
-               MAX(CASE WHEN a.date = date('now') THEN 1 ELSE 0 END) as day_0,
-               MAX(CASE WHEN a.date = date('now', '+1 days') THEN 1 ELSE 0 END) as day_1,
-               MAX(CASE WHEN a.date = date('now', '+2 days') THEN 1 ELSE 0 END) as day_2,
-               MAX(CASE WHEN a.date = date('now', '+3 days') THEN 1 ELSE 0 END) as day_3,
-               MAX(CASE WHEN a.date = date('now', '+4 days') THEN 1 ELSE 0 END) as day_4
+            SELECT r.id, r.name, r.phone, r.affiliation, r.city, r.token, r.last_toggled_at,
+                MAX(CASE WHEN a.date = date('now') THEN 1 ELSE 0 END) as day_0,
+                MAX(CASE WHEN a.date = date('now', '+1 days') THEN 1 ELSE 0 END) as day_1,
+                MAX(CASE WHEN a.date = date('now', '+2 days') THEN 1 ELSE 0 END) as day_2,
+                MAX(CASE WHEN a.date = date('now', '+3 days') THEN 1 ELSE 0 END) as day_3,
+                MAX(CASE WHEN a.date = date('now', '+4 days') THEN 1 ELSE 0 END) as day_4
             FROM riggers r
             LEFT JOIN availability a ON a.rigger_id = r.id
             WHERE r.status = 'approved'
@@ -280,7 +279,11 @@ def admin_availability():
             "name": r["name"],
             "phone": r["phone"],            
             "availability": [r["day_0"], r["day_1"], r["day_2"], r["day_3"], r["day_4"]],
-            "token": r["token"]
+            "token": r["token"],
+            "last_toggled_at": datetime.strptime(r["last_toggled_at"], 
+            "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc).astimezone(ZoneInfo("America/Los_Angeles")).strftime("%m/%d %I:%M%p") 
+            if r["last_toggled_at"] 
+            else "Never"
         })
 
     riggers = sorted(riggers, key=lambda r: r['name'].split()[-1].lower()) # Sort by last name, case-insensitive
@@ -395,8 +398,12 @@ def availability(token):
             conn.execute(
                 "INSERT INTO availability (rigger_id, date) VALUES (?, date('now', ?))",
                 (rigger["id"], modifier)
-            )
+)
 
+        conn.execute(
+            "UPDATE riggers SET last_toggled_at = datetime('now') WHERE id = ?",
+            (rigger["id"],)
+        )
         conn.commit()
         conn.close()
         return redirect(url_for("availability", token=token))
