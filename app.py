@@ -219,27 +219,60 @@ def delete_rigger(id):
 @admin_required
 def admin_availability():
     conn = get_db()
+    
+    filter_day = request.args.get('filter_day', 'all') # Get the filter_day parameter from the query string, default to 'all'
 
     days = []
     for i in range(5):
         d = date.today() + timedelta(days=i)
         days.append({
-            "date_str": d.strftime("%b %d")
+            "date_str": d.strftime("%b %d"),
+            "date_val": d.strftime("%Y-%m-%d")
         })
 
-    rows = conn.execute("""
-        SELECT r.id, r.name, r.phone, r.affiliation, r.city,
+    # Determine the date filter based on the filter_day parameter
+    if filter_day == 'all':
+        date_filter = None # No date filter, show all riggers
+    elif filter_day == 'today':
+        date_filter = date.today().strftime("%Y-%m-%d") # Filter for riggers available today
+    elif filter_day == 'tomorrow':
+        date_filter = (date.today() + timedelta(days=1)).strftime("%Y-%m-%d") # Filter for riggers available tomorrow
+    else:
+        date_filter = filter_day  # Assume it's in YYYY-MM-DD format
+
+
+    # If a date filter is applied, modify the query to only include riggers available on that date
+    if date_filter:
+        rows = conn.execute("""
+            SELECT r.id, r.name, r.phone, r.affiliation, r.city,
+                   MAX(CASE WHEN a.date = date('now') THEN 1 ELSE 0 END) as day_0,
+                   MAX(CASE WHEN a.date = date('now', '+1 days') THEN 1 ELSE 0 END) as day_1,
+                   MAX(CASE WHEN a.date = date('now', '+2 days') THEN 1 ELSE 0 END) as day_2,
+                   MAX(CASE WHEN a.date = date('now', '+3 days') THEN 1 ELSE 0 END) as day_3,
+                   MAX(CASE WHEN a.date = date('now', '+4 days') THEN 1 ELSE 0 END) as day_4
+            FROM riggers r
+            LEFT JOIN availability a ON a.rigger_id = r.id
+            WHERE r.status = 'approved'
+            AND r.id IN (
+                SELECT rigger_id FROM availability WHERE date =?
+            )
+            GROUP BY r.id
+        """, (date_filter,)).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT r.id, r.name, r.phone, r.affiliation, r.city,
                MAX(CASE WHEN a.date = date('now') THEN 1 ELSE 0 END) as day_0,
                MAX(CASE WHEN a.date = date('now', '+1 days') THEN 1 ELSE 0 END) as day_1,
                MAX(CASE WHEN a.date = date('now', '+2 days') THEN 1 ELSE 0 END) as day_2,
                MAX(CASE WHEN a.date = date('now', '+3 days') THEN 1 ELSE 0 END) as day_3,
                MAX(CASE WHEN a.date = date('now', '+4 days') THEN 1 ELSE 0 END) as day_4
-        FROM riggers r
-        LEFT JOIN availability a ON a.rigger_id = r.id
-        WHERE r.status = 'approved'
-        GROUP BY r.id
+            FROM riggers r
+            LEFT JOIN availability a ON a.rigger_id = r.id
+            WHERE r.status = 'approved'
+            GROUP BY r.id
         """).fetchall()
 
+    # Process the rows into a list of riggers with their availability
     riggers = []
     for r in rows:
         riggers.append({
@@ -251,7 +284,7 @@ def admin_availability():
 
     riggers = sorted(riggers, key=lambda r: r['name'].split()[-1].lower()) # Sort by last name, case-insensitive
     conn.close()
-    return render_template("admin_availability.html", riggers=riggers, days=days)
+    return render_template("admin_availability.html", riggers=riggers, days=days, filter_day=filter_day)
 
 
 # Admin view to see all riggers with status of 'pending'. Is public on dev server but should be protected in production.

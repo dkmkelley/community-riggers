@@ -3,9 +3,19 @@
 {% block title %}Admin | Community Riggers{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<!-- Filter Form -->
+ <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="mb-0">Available Riggers</h1>
-    <small class="text-muted">Updates in real time as riggers toggle their status.</small>
+    <form method="GET" action="/admin/availability">
+        <select name="filter_day" class="form-select form-select-sm" onchange="this.form.submit()">
+            <option value="all" {% if filter_day == 'all' %}selected{% endif %}>All Days</option>
+            <option value="today" {% if filter_day == 'today' %}selected{% endif %}>Available Today</option>
+            <option value="tomorrow" {% if filter_day == 'tomorrow' %}selected{% endif %}>Available Tomorrow</option>
+            {% for day in days[2:] %} <!-- Start loop at index 2 to skip "today" and "tomorrow" since they are already options.-->
+            <option value="{{ day.date_val }}" {% if filter_day == day.date_val %}selected{% endif %}>{{ day.date_str }}</option>
+            {% endfor %}
+        </select>
+    </form>>
 </div>
 
 {% if riggers %}
@@ -47,6 +57,10 @@
     </table>
 </div>
 {% else %}
-<div class="alert alert-info">No riggers in the directory yet.</div>
+{% if filter_day == 'all' %}
+    <div class="alert alert-info">No riggers available.</div>
+{% else %}
+    <div class="alert alert-info">No riggers available on this date.</div>
+{% endif %}
 {% endif %}
 {% endblock %}
