@@ -10,14 +10,13 @@
 
 {% if riggers %}
     <div class="table-responsive">
-        <table class="table table-striped table-hover align-middle">
+        <table class="table table-striped table-hover align-middle table-sm">
             <thead class="table-dark">
                 <tr>
                     <th>Name</th>
                     <th>Phone</th>
                     <th>Affiliation</th>
                     <th>City</th>
-                    <th>Link</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -30,13 +29,9 @@
                     <td>{{ rigger["city"] or "—" }}</td>
                     <td>
                         <button class="btn btn-outline-secondary btn-sm copy-btn"
-                                data-url="{{ request.host_url }}availability/{{ rigger['token'] }}">
-                            Copy Link
-                        </button>
-                    </td>
-                    <td>
+                                data-url="{{ request.host_url }}availability/{{ rigger['token'] }}">Copy Link</button>                        
                         <a href="/riggers/{{ rigger['id'] }}/edit" class="btn btn-outline-primary btn-sm">Edit</a>
-                        <a href="/riggers/{{ rigger['id'] }}/delete" class="btn btn-outline-danger btn-sm ms-1">Delete</a>
+                        <a href="/riggers/{{ rigger['id'] }}/delete" class="btn btn-outline-danger btn-sm">Delete</a>
                     </td>
                 </tr>
                 {% endfor %}
