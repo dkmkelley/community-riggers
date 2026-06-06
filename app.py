@@ -244,7 +244,7 @@ def admin_availability():
     # If a date filter is applied, modify the query to only include riggers available on that date
     if date_filter:
         rows = conn.execute("""
-            SELECT r.id, r.name, r.phone, r.affiliation, r.city,
+            SELECT r.id, r.name, r.phone, r.affiliation, r.city, r.token,
                    MAX(CASE WHEN a.date = date('now') THEN 1 ELSE 0 END) as day_0,
                    MAX(CASE WHEN a.date = date('now', '+1 days') THEN 1 ELSE 0 END) as day_1,
                    MAX(CASE WHEN a.date = date('now', '+2 days') THEN 1 ELSE 0 END) as day_2,
@@ -260,7 +260,7 @@ def admin_availability():
         """, (date_filter,)).fetchall()
     else:
         rows = conn.execute("""
-            SELECT r.id, r.name, r.phone, r.affiliation, r.city,
+            SELECT r.id, r.name, r.phone, r.affiliation, r.city, r.token,
                MAX(CASE WHEN a.date = date('now') THEN 1 ELSE 0 END) as day_0,
                MAX(CASE WHEN a.date = date('now', '+1 days') THEN 1 ELSE 0 END) as day_1,
                MAX(CASE WHEN a.date = date('now', '+2 days') THEN 1 ELSE 0 END) as day_2,
@@ -279,7 +279,8 @@ def admin_availability():
             "id": r["id"],
             "name": r["name"],
             "phone": r["phone"],            
-            "availability": [r["day_0"], r["day_1"], r["day_2"], r["day_3"], r["day_4"]]
+            "availability": [r["day_0"], r["day_1"], r["day_2"], r["day_3"], r["day_4"]],
+            "token": r["token"]
         })
 
     riggers = sorted(riggers, key=lambda r: r['name'].split()[-1].lower()) # Sort by last name, case-insensitive
