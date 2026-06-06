@@ -36,8 +36,10 @@
                 </td>
                 {% endfor %}
                 <td>
-                    <a href="tel:{{ rigger.phone }}" class="btn btn-outline-primary btn-sm">Call</a>
-                    <a href="sms:{{ rigger.phone }}" class="btn btn-outline-secondary btn-sm ms-1">Text</a>
+                    <div class="d-flex flex-column gap-1">
+                        <a href="tel:{{ rigger.phone }}" class="btn btn-outline-primary btn-sm w-100">Call</a>
+                        <a href="sms:{{ rigger.phone }}" class="btn btn-outline-secondary btn-sm w-100">Text</a>
+                    </div>
                 </td>
             </tr>
             {% endfor %}
