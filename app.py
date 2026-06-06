@@ -220,14 +220,7 @@ def admin_availability():
     days = []
     for i in range(5):
         d = date.today() + timedelta(days=i)
-        if i == 0:
-            label = "Today"
-        elif i == 1:
-            label = "Tomorrow"
-        else:
-            label = d.strftime("%A")
         days.append({
-            "label": label,
             "date_str": d.strftime("%b %d")
         })
 
