@@ -1,8 +1,5 @@
 :root {
-    --bs-primary: #your-color-here;
-    --bs-body-bg: #your-background;
-    --bs-body-color: #your-text-color;
-    
+    color-scheme: dark;  
 }
 
 .text-indent {
