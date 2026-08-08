@@ -60,7 +60,9 @@ def format_phone(phone):
 # Default route. Currently redirects to the list of riggers
 @app.route("/")
 def home():
-    return redirect(url_for("list_riggers"))
+    if is_admin():
+        return redirect(url_for("admin_availability"))
+    return render_template("landing.html")
 
 
 # auth0 login route

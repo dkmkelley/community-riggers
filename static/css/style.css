@@ -2,4 +2,9 @@
     --bs-primary: #your-color-here;
     --bs-body-bg: #your-background;
     --bs-body-color: #your-text-color;
+    
 }
+
+.text-indent {
+    text-indent: 2em;
+}   
