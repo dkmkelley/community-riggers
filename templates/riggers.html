@@ -29,7 +29,7 @@
                     <td>{{ rigger["city"] or "—" }}</td>
                     <td>
                         <div class="d-flex flex-column gap-1">
-                         <a href="sms:{{ rigger['phone'] }}?body=Update%20your%20availability%20at%20Community%20Riggers%3A%20https%3A%2F%2Fwww.communityriggers.org%2Favailability%2F{{ rigger['token'] }}"
+                         <a href="sms:{{ rigger['phone'] }}?body=Your%20Personal%20Community%20Riggers%20Link%3A%20https%3A%2F%2Fwww.communityriggers.org%2Favailability%2F{{ rigger['token'] }}"
                         class="btn btn-outline-success btn-sm">Send Link</a>                       
                         <a href="/riggers/{{ rigger['id'] }}/edit" class="btn btn-outline-primary btn-sm">Edit</a>
                         <a href="/riggers/{{ rigger['id'] }}/delete" class="btn btn-outline-danger btn-sm">Delete</a>

@@ -50,6 +50,8 @@
                 {% endfor %}
                 <td>
                     <div class="d-flex flex-column gap-1">
+                        <a href="sms:{{ rigger['phone'] }}?body=Update%20your%20availability%20at%20Community%20Riggers%3A%20https%3A%2F%2Fwww.communityriggers.org%2Favailability%2F{{ rigger['token'] }}"
+                        class="btn btn-outline-success btn-sm">Send Reminder</a>
                         <a href="tel:{{ rigger.phone }}" class="btn btn-outline-primary btn-sm w-100">Call</a>
                         <a href="sms:{{ rigger.phone }}" class="btn btn-outline-secondary btn-sm w-100">Text</a>
                     </div>

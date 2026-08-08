@@ -108,9 +108,9 @@ def list_riggers():
     
     riggers = conn.execute("SELECT id, name, phone, affiliation, city, token FROM riggers WHERE status = 'approved'"
     ).fetchall()
-    riggers = sorted(riggers, key=lambda r: r['name'].split()[-1].lower())  # Sort by last name, case-insensitive
+    riggers = sorted(riggers, key=lambda r: r['name'].split()[0].lower())  # Sort by first name, case-insensitive
     conn.close()
-    
+
     return render_template("riggers.html", riggers=riggers)
 
 
@@ -298,7 +298,7 @@ def admin_availability():
             else "Never"
         })
 
-    riggers = sorted(riggers, key=lambda r: r['name'].split()[-1].lower()) # Sort by last name, case-insensitive
+    riggers = sorted(riggers, key=lambda r: r['name'].split()[0].lower()) # Sort by first name, case-insensitive
     conn.close()
     return render_template("admin_availability.html", riggers=riggers, days=days, filter_day=filter_day)
 
