@@ -7,4 +7,9 @@
 
 .text-indent {
     text-indent: 2em;
-}   
+}
+
+.hero-logo {
+    height: clamp(120px, 35vw, 260px);
+    width: auto;
+}
