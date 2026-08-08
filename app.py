@@ -17,6 +17,16 @@ app.secret_key = os.getenv("AUTH0_SECRET")
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 app.config['SESSION_COOKIE_SECURE'] = False
 
+
+@app.context_processor
+def inject_asset_version():
+    def asset_url(filename):
+        filepath = os.path.join(app.static_folder, filename)
+        version = int(os.path.getmtime(filepath))
+        return url_for('static', filename=filename) + f'?v={version}'
+    return dict(asset_url=asset_url)
+
+
 oauth = OAuth(app)
 oauth.register(
     "auth0",
