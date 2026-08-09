@@ -109,6 +109,15 @@ def format_phone(phone):
     return phone
 
 
+# Filter function to display a full name as "Last, First"
+@app.template_filter("last_first")
+def last_first(name):
+    parts = name.split()
+    if len(parts) < 2:
+        return name
+    return f"{parts[-1]}, {' '.join(parts[:-1])}"
+
+
 # Default route. Currently redirects to the admin availability page if logged in, otherwise shows a landing page
 
 @app.route("/")
@@ -164,13 +173,21 @@ def logout():
 @admin_required
 def list_riggers():
     conn = get_db()
-    
+
+    sort_by = request.args.get('sort_by', 'name')
+    sort_dir = request.args.get('sort_dir', 'asc')
+
     riggers = conn.execute("SELECT id, name, phone, affiliation, city, token FROM riggers WHERE status = 'approved'"
     ).fetchall()
-    riggers = sorted(riggers, key=lambda r: r['name'].split()[0].lower())  # Sort by first name, case-insensitive
+
+    if sort_by == 'city':
+        riggers = sorted(riggers, key=lambda r: (r['city'] or '').lower(), reverse=(sort_dir == 'desc'))
+    else:
+        riggers = sorted(riggers, key=lambda r: r['name'].split()[-1].lower(), reverse=(sort_dir == 'desc'))  # Sort by last name, case-insensitive
+
     conn.close()
 
-    return render_template("riggers.html", riggers=riggers)
+    return render_template("riggers.html", riggers=riggers, sort_by=sort_by, sort_dir=sort_dir)
 
 
 # Sends an SMS message (via Twilio) to one or more selected riggers. Used for both single-rigger
@@ -328,6 +345,7 @@ def admin_availability():
     conn = get_db()
     
     filter_day = request.args.get('filter_day', 'all') # Get the filter_day parameter from the query string, default to 'all'
+    sort_dir = request.args.get('sort_dir', 'asc')
 
     days = []
     for i in range(5):
@@ -395,9 +413,9 @@ def admin_availability():
             else "Never"
         })
 
-    riggers = sorted(riggers, key=lambda r: r['name'].split()[0].lower()) # Sort by first name, case-insensitive
+    riggers = sorted(riggers, key=lambda r: r['name'].split()[-1].lower(), reverse=(sort_dir == 'desc')) # Sort by last name, case-insensitive
     conn.close()
-    return render_template("admin_availability.html", riggers=riggers, days=days, filter_day=filter_day)
+    return render_template("admin_availability.html", riggers=riggers, days=days, filter_day=filter_day, sort_dir=sort_dir)
 
 
 # Admin view to see all riggers with status of 'pending'. Is public on dev server but should be protected in production.
@@ -571,7 +589,7 @@ def edit_own_info(token):
         if not name or not phone:
             conn.close()
             return render_template("edit_own_info.html", rigger=rigger,
-                       error="Name and phone are required.", current_user=None)
+                       error="Name and phone are required.")
 
         digits = ''.join(filter(str.isdigit, phone))
         if len(digits) == 10:
@@ -580,7 +598,7 @@ def edit_own_info(token):
             phone = f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
         else:
             return render_template("edit_own_info.html", rigger=rigger,
-                       error="Please enter a valid 10-digit US phone number.", current_user=None)
+                       error="Please enter a valid 10-digit US phone number.")
 
         conn.execute(
             """UPDATE riggers
@@ -593,7 +611,7 @@ def edit_own_info(token):
         return redirect(url_for("availability", token=token))
 
     conn.close()
-    return render_template("edit_own_info.html", rigger=rigger, current_user=None)
+    return render_template("edit_own_info.html", rigger=rigger)
 
 
 

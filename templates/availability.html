@@ -8,8 +8,13 @@
 
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <h1 class="mb-0">Hi, {{ rigger['name'] }}</h1>
-                <p class="text-muted mb-0">Tap a button to toggle your availability.</p>
+                {% if current_user %}
+                    <h1 class="mb-0">{{ rigger['name'] }}'s Availability</h1>
+                    <p class="text-muted mb-0">Tap a button to toggle their availability.</p>
+                {% else %}
+                    <h1 class="mb-0">Hi, {{ rigger['name'] }}</h1>
+                    <p class="text-muted mb-0">Tap a button to toggle your availability.</p>
+                {% endif %}
             </div>
             <a href="/availability/{{ rigger['token'] }}/edit" class="btn btn-outline-secondary btn-sm">
                 Change Personal Info

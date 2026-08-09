@@ -22,10 +22,18 @@
             <thead class="table-dark">
                 <tr>
                     <th><input type="checkbox" id="select-all-checkbox" aria-label="Select all riggers"></th>
-                    <th>Name</th>
+                    <th>
+                        <a href="{{ url_for('list_riggers', sort_by='name', sort_dir='desc' if (sort_by == 'name' and sort_dir == 'asc') else 'asc') }}" class="text-white text-decoration-none">
+                            Name {% if sort_by == 'name' %}{% if sort_dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}{% else %}<span class="text-muted">&#8645;</span>{% endif %}
+                        </a>
+                    </th>
                     <th>Phone</th>
                     <th>Local</th>
-                    <th>City</th>
+                    <th>
+                        <a href="{{ url_for('list_riggers', sort_by='city', sort_dir='desc' if (sort_by == 'city' and sort_dir == 'asc') else 'asc') }}" class="text-white text-decoration-none">
+                            City {% if sort_by == 'city' %}{% if sort_dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}{% else %}<span class="text-muted">&#8645;</span>{% endif %}
+                        </a>
+                    </th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -33,7 +41,7 @@
                 {% for rigger in riggers %}
                 <tr>
                     <td><input type="checkbox" class="rigger-checkbox" name="rigger_ids" value="{{ rigger['id'] }}" form="bulk-send-form" aria-label="Select {{ rigger['name'] }}"></td>
-                    <td>{{ rigger["name"] }}</td>
+                    <td><a href="/availability/{{ rigger['token'] }}">{{ rigger["name"] | last_first }}</a></td>
                     <td>{{ rigger["phone"] }}</td>
                     <td>{{ rigger["affiliation"] or "—" }}</td>
                     <td>{{ rigger["city"] or "—" }}</td>

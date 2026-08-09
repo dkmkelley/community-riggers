@@ -33,7 +33,11 @@
         <thead class="table-dark">
             <tr>
                 <th><input type="checkbox" id="select-all-checkbox" aria-label="Select all riggers"></th>
-                <th>Name</th>
+                <th>
+                    <a href="{{ url_for('admin_availability', filter_day=filter_day, sort_dir='desc' if sort_dir == 'asc' else 'asc') }}" class="text-white text-decoration-none">
+                        Name {% if sort_dir == 'asc' %}&#9650;{% else %}&#9660;{% endif %}
+                    </a>
+                </th>
 
                 {% for day in days %}
                 <th class="text-center">{{ day.date_str }}</th>
@@ -46,7 +50,7 @@
             {% for rigger in riggers %}
             <tr>
                 <td><input type="checkbox" class="rigger-checkbox" name="rigger_ids" value="{{ rigger.id }}" form="bulk-send-form" aria-label="Select {{ rigger.name }}"></td>
-                <td><a href="/availability/{{ rigger.token }}">{{ rigger.name }}</a>
+                <td><a href="/availability/{{ rigger.token }}">{{ rigger.name | last_first }}</a>
                     <div><small class="text-muted" style="font-size: 0.7rem;">Updated: {{ rigger.last_toggled_at }}</small></div>
                 </td>
                 {% for avail in rigger.availability %}
