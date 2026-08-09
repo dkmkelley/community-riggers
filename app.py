@@ -7,16 +7,19 @@ import os
 from authlib.integrations.flask_client import OAuth
 from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, session, flash
+from twilio.rest import Client
+from twilio.base.exceptions import TwilioRestException
 
 from database import get_db, generate_token
 
 load_dotenv()
 
+# Helper function to set the timezone to Pacific Time for all date operations instead of relying on server's timezone
 
 def pacific_today():
     return datetime.now(ZoneInfo("America/Los_Angeles")).date()
 
-
+# Flask application setup
 app = Flask(__name__)
 app.secret_key = os.getenv("AUTH0_SECRET")
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
@@ -32,6 +35,8 @@ def inject_asset_version():
     return dict(asset_url=asset_url)
 
 
+# OAuth setup for Auth0
+
 oauth = OAuth(app)
 oauth.register(
     "auth0",
@@ -42,10 +47,41 @@ oauth.register(
 )
 
 
+# Twilio setup for sending SMS messages from the server
+
+twilio_client = Client(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
+TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER")
+
+
+# Converts a stored phone number into E.164 format (e.g. +14155551234) as required by Twilio
+def to_e164(phone):
+    digits = ''.join(filter(str.isdigit, phone))
+    if len(digits) == 10:
+        return f"+1{digits}"
+    elif len(digits) == 11 and digits[0] == '1':
+        return f"+{digits}"
+    return None
+
+
+# Sends a single SMS via Twilio. Returns True on success, False if the send failed.
+def send_sms(phone, body):
+    to_number = to_e164(phone)
+    if not to_number:
+        return False
+    try:
+        twilio_client.messages.create(body=body, from_=TWILIO_FROM_NUMBER, to=to_number)
+        return True
+    except TwilioRestException:
+        return False
+
+
+# Helper functions for authentication and authorization
+
+# Check if the user is logged in (admin)
 def is_admin():
     return session.get('user') is not None
 
-
+# Decorator to require admin login for certain routes
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -54,6 +90,7 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+# Inject the current user into the template context for use in templates
 @app.context_processor
 def inject_user():
     return dict(current_user=session.get('user'))
@@ -72,7 +109,8 @@ def format_phone(phone):
     return phone
 
 
-# Default route. Currently redirects to the list of riggers
+# Default route. Currently redirects to the admin availability page if logged in, otherwise shows a landing page
+
 @app.route("/")
 def home():
     if is_admin():
@@ -80,13 +118,27 @@ def home():
     return render_template("landing.html")
 
 
+# Public terms of service and privacy policy pages, linked from the SMS consent checkbox on the sign-up form
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+
 # auth0 login route
+
 @app.route("/login")
 def login():
     return oauth.auth0.authorize_redirect(redirect_uri=url_for("callback", _external=True))
 
 
 # auth0 callback route
+
 @app.route("/callback")
 def callback():
     token = oauth.auth0.authorize_access_token()
@@ -95,6 +147,7 @@ def callback():
 
 
 # auth0 logout route
+
 @app.route("/logout")
 def logout():
     session.clear()
@@ -105,7 +158,8 @@ def logout():
     )
 
 
-# Route to list all riggers
+# Route to list all riggers in the riggers directory. Only accessible to admins. Riggers are sorted by first name, case-insensitive.
+
 @app.route("/riggers")
 @admin_required
 def list_riggers():
@@ -119,7 +173,41 @@ def list_riggers():
     return render_template("riggers.html", riggers=riggers)
 
 
+# Sends an SMS message (via Twilio) to one or more selected riggers. Used for both single-rigger
+# canned messages (e.g. "Send Link" buttons) and the multi-select bulk message form.
+@app.route("/admin/send_sms", methods=["POST"])
+@admin_required
+def admin_send_sms():
+    rigger_ids = request.form.getlist("rigger_ids")
+    message = request.form.get("message", "").strip()
+
+    if not rigger_ids:
+        flash("No riggers selected.")
+        return redirect(request.referrer or url_for("admin_availability"))
+    if not message:
+        flash("Message cannot be empty.")
+        return redirect(request.referrer or url_for("admin_availability"))
+
+    conn = get_db()
+    placeholders = ",".join("?" * len(rigger_ids))
+    riggers = conn.execute(
+        f"SELECT phone FROM riggers WHERE id IN ({placeholders})", rigger_ids
+    ).fetchall()
+    conn.close()
+
+    sent = sum(1 for r in riggers if send_sms(r["phone"], message))
+    failed = len(riggers) - sent
+
+    if failed:
+        flash(f"Sent to {sent} rigger(s). {failed} failed to send.")
+    else:
+        flash(f"Sent to {sent} rigger(s).")
+
+    return redirect(request.referrer or url_for("admin_availability"))
+
+
 # Route to add a new rigger
+
 @app.route("/add", methods=["GET", "POST"])
 def add_rigger():
     if request.method == "POST":
@@ -130,7 +218,10 @@ def add_rigger():
 
         if not name or not phone:
             return render_template("add_rigger.html", error="Name and phone are required.")
-        
+
+        if not request.form.get("sms_consent"):
+            return render_template("add_rigger.html", error="You must agree to receive SMS text messages to be added to the directory.")
+
         digits = ''.join(filter(str.isdigit, phone))
         if len(digits) == 10:
             phone = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
@@ -330,6 +421,9 @@ def admin_add_rigger():
 
         if not name or not phone:
             return render_template("add_rigger.html", error="Name and phone are required.")
+
+        if not request.form.get("sms_consent"):
+            return render_template("add_rigger.html", error="You must confirm this rigger has agreed to receive SMS text messages.")
 
         digits = ''.join(filter(str.isdigit, phone))
         if len(digits) == 10:

@@ -36,6 +36,24 @@
                 <input type="text" id="city" name="city" class="form-control">
             </div>
 
+            <div class="form-check mb-3">
+                <input type="checkbox" class="form-check-input" id="sms_consent" name="sms_consent" required>
+                <label class="form-check-label" for="sms_consent">
+                    {% if current_user %}
+                        I confirm this rigger has agreed to receive SMS text messages from Community
+                        Riggers related to their availability, including their personal availability link
+                        and occasional reminders.
+                    {% else %}
+                        Yes, I would like to receive SMS text messages from Community Riggers related to
+                        my availability, including my personal availability link and occasional reminders.
+                    {% endif %}
+                    I understand message frequency varies and message and data rates may apply. Reply
+                    HELP for help or STOP to cancel at any time. See our
+                    <a href="{{ url_for('terms') }}" target="_blank" rel="noopener">Terms of Service</a>
+                    and <a href="{{ url_for('privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.
+                </label>
+            </div>
+
             <button type="submit" class="btn btn-success">
                 {% if current_user %}Add Rigger{% else %}Add Yourself{% endif %}
             </button>
