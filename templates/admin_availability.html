@@ -62,7 +62,7 @@
                     <div class="d-flex flex-column gap-1">
                         <form method="POST" action="{{ url_for('admin_send_sms') }}">
                             <input type="hidden" name="rigger_ids" value="{{ rigger.id }}">
-                            <input type="hidden" name="message" value="Update your availability at Community Riggers: https://www.communityriggers.org/availability/{{ rigger.token }}">
+                            <input type="hidden" name="message" value="Update your availability at Community Riggers: https://communityriggers.org/availability/{{ rigger.token }}">
                             <button type="submit" class="btn btn-outline-success btn-sm w-100">Send Reminder</button>
                         </form>
                         <a href="tel:{{ rigger.phone }}" class="btn btn-outline-primary btn-sm w-100">Call</a>
