@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
 from functools import wraps
@@ -11,6 +11,11 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from database import get_db, generate_token
 
 load_dotenv()
+
+
+def pacific_today():
+    return datetime.now(ZoneInfo("America/Los_Angeles")).date()
+
 
 app = Flask(__name__)
 app.secret_key = os.getenv("AUTH0_SECRET")
@@ -235,7 +240,7 @@ def admin_availability():
 
     days = []
     for i in range(5):
-        d = date.today() + timedelta(days=i)
+        d = pacific_today() + timedelta(days=i)
         days.append({
             "date_str": d.strftime("%b %d"),
             "date_val": d.strftime("%Y-%m-%d")
@@ -245,22 +250,23 @@ def admin_availability():
     if filter_day == 'all':
         date_filter = None # No date filter, show all riggers
     elif filter_day == 'today':
-        date_filter = date.today().strftime("%Y-%m-%d") # Filter for riggers available today
+        date_filter = pacific_today().strftime("%Y-%m-%d") # Filter for riggers available today
     elif filter_day == 'tomorrow':
-        date_filter = (date.today() + timedelta(days=1)).strftime("%Y-%m-%d") # Filter for riggers available tomorrow
+        date_filter = (pacific_today() + timedelta(days=1)).strftime("%Y-%m-%d") # Filter for riggers available tomorrow
     else:
         date_filter = filter_day  # Assume it's in YYYY-MM-DD format
 
+    day_strs = [(pacific_today() + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(5)]
 
     # If a date filter is applied, modify the query to only include riggers available on that date
     if date_filter:
         rows = conn.execute("""
             SELECT r.id, r.name, r.phone, r.affiliation, r.city, r.token, r.last_toggled_at,
-                MAX(CASE WHEN a.date = date('now') THEN 1 ELSE 0 END) as day_0,
-                MAX(CASE WHEN a.date = date('now', '+1 days') THEN 1 ELSE 0 END) as day_1,
-                MAX(CASE WHEN a.date = date('now', '+2 days') THEN 1 ELSE 0 END) as day_2,
-                MAX(CASE WHEN a.date = date('now', '+3 days') THEN 1 ELSE 0 END) as day_3,
-                MAX(CASE WHEN a.date = date('now', '+4 days') THEN 1 ELSE 0 END) as day_4
+                MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_0,
+                MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_1,
+                MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_2,
+                MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_3,
+                MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_4
             FROM riggers r
             LEFT JOIN availability a ON a.rigger_id = r.id
             WHERE r.status = 'approved'
@@ -268,20 +274,20 @@ def admin_availability():
                 SELECT rigger_id FROM availability WHERE date =?
             )
             GROUP BY r.id
-        """, (date_filter,)).fetchall()
+        """, (*day_strs, date_filter,)).fetchall()
     else:
         rows = conn.execute("""
             SELECT r.id, r.name, r.phone, r.affiliation, r.city, r.token, r.last_toggled_at,
-                MAX(CASE WHEN a.date = date('now') THEN 1 ELSE 0 END) as day_0,
-                MAX(CASE WHEN a.date = date('now', '+1 days') THEN 1 ELSE 0 END) as day_1,
-                MAX(CASE WHEN a.date = date('now', '+2 days') THEN 1 ELSE 0 END) as day_2,
-                MAX(CASE WHEN a.date = date('now', '+3 days') THEN 1 ELSE 0 END) as day_3,
-                MAX(CASE WHEN a.date = date('now', '+4 days') THEN 1 ELSE 0 END) as day_4
+                MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_0,
+                MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_1,
+                MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_2,
+                MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_3,
+                MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_4
             FROM riggers r
             LEFT JOIN availability a ON a.rigger_id = r.id
             WHERE r.status = 'approved'
             GROUP BY r.id
-        """).fetchall()
+        """, (*day_strs,)).fetchall()
 
     # Process the rows into a list of riggers with their availability
     riggers = []
@@ -395,22 +401,22 @@ def availability(token):
             conn.close()
             return "Invalid request.", 400
 
-        modifier = f"+{offset} days"
+        target_date = (pacific_today() + timedelta(days=offset)).strftime("%Y-%m-%d")
         existing = conn.execute(
-            "SELECT id FROM availability WHERE rigger_id = ? AND date = date('now', ?)",
-            (rigger["id"], modifier)
+            "SELECT id FROM availability WHERE rigger_id = ? AND date = ?",
+            (rigger["id"], target_date)
         ).fetchone()
 
         if existing:
             conn.execute(
-                "DELETE FROM availability WHERE rigger_id = ? AND date = date('now', ?)",
-                (rigger["id"], modifier)
+                "DELETE FROM availability WHERE rigger_id = ? AND date = ?",
+                (rigger["id"], target_date)
             )
         else:
             conn.execute(
-                "INSERT INTO availability (rigger_id, date) VALUES (?, date('now', ?))",
-                (rigger["id"], modifier)
-)
+                "INSERT INTO availability (rigger_id, date) VALUES (?, ?)",
+                (rigger["id"], target_date)
+            )
 
         conn.execute(
             "UPDATE riggers SET last_toggled_at = datetime('now') WHERE id = ?",
@@ -422,11 +428,11 @@ def availability(token):
 
     days = []
     for i in range(5):
-        modifier = f"+{i} days"
-        d = date.today() + timedelta(days=i)
+        d = pacific_today() + timedelta(days=i)
+        target_date = d.strftime("%Y-%m-%d")
         available = conn.execute(
-            "SELECT id FROM availability WHERE rigger_id = ? AND date = date('now', ?)",
-            (rigger["id"], modifier)
+            "SELECT id FROM availability WHERE rigger_id = ? AND date = ?",
+            (rigger["id"], target_date)
         ).fetchone() is not None
 
         if i == 0:
