@@ -41,7 +41,7 @@
                         <div class="d-flex flex-column gap-1">
                         <form method="POST" action="{{ url_for('admin_send_sms') }}">
                             <input type="hidden" name="rigger_ids" value="{{ rigger['id'] }}">
-                            <input type="hidden" name="message" value="Your Personal Community Riggers Link: https://communityriggers.org/availability/{{ rigger['token'] }}">
+                            <input type="hidden" name="message" value="Your Personal Community Riggers Link: https://www.communityriggers.org/availability/{{ rigger['token'] }}">
                             <button type="submit" class="btn btn-outline-success btn-sm w-100">Send Link</button>
                         </form>
                         <a href="/riggers/{{ rigger['id'] }}/edit" class="btn btn-outline-primary btn-sm">Edit</a>
