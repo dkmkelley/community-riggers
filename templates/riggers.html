@@ -44,6 +44,7 @@
                             <input type="hidden" name="message" value="Your Personal Community Riggers Link: https://www.communityriggers.org/availability/{{ rigger['token'] }}">
                             <button type="submit" class="btn btn-outline-success btn-sm w-100">Send Link</button>
                         </form>
+                        <a href="sms:{{ rigger['phone'] }}?body=Your%20Personal%20Community%20Riggers%20Link%3A%20https%3A%2F%2Fwww.communityriggers.org%2Favailability%2F{{ rigger['token'] }}" class="btn btn-outline-secondary btn-sm">Text from Phone</a>
                         <a href="/riggers/{{ rigger['id'] }}/edit" class="btn btn-outline-primary btn-sm">Edit</a>
                         <a href="/riggers/{{ rigger['id'] }}/delete" class="btn btn-outline-danger btn-sm">Delete</a>
                         </div>

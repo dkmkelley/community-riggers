@@ -65,6 +65,7 @@
                             <input type="hidden" name="message" value="Update your availability at Community Riggers: https://www.communityriggers.org/availability/{{ rigger.token }}">
                             <button type="submit" class="btn btn-outline-success btn-sm w-100">Send Reminder</button>
                         </form>
+                        <a href="sms:{{ rigger.phone }}?body=Update%20your%20availability%20at%20Community%20Riggers%3A%20https%3A%2F%2Fwww.communityriggers.org%2Favailability%2F{{ rigger.token }}" class="btn btn-outline-secondary btn-sm">Text from Phone</a>
                         <a href="tel:{{ rigger.phone }}" class="btn btn-outline-primary btn-sm w-100">Call</a>
                     </div>
                 </td>

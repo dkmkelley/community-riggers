@@ -50,7 +50,7 @@ oauth.register(
 # Twilio setup for sending SMS messages from the server
 
 twilio_client = Client(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
-TWILIO_FROM_NUMBER = os.getenv("TWILIO_FROM_NUMBER")
+TWILIO_MESSAGING_SERVICE_SID = os.getenv("TWILIO_MESSAGING_SERVICE_SID")
 
 
 # Converts a stored phone number into E.164 format (e.g. +14155551234) as required by Twilio
@@ -69,7 +69,7 @@ def send_sms(phone, body):
     if not to_number:
         return False
     try:
-        twilio_client.messages.create(body=body, from_=TWILIO_FROM_NUMBER, to=to_number)
+        twilio_client.messages.create(body=body, messaging_service_sid=TWILIO_MESSAGING_SERVICE_SID, to=to_number)
         return True
     except TwilioRestException:
         return False
