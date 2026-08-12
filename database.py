@@ -36,6 +36,10 @@ def ensure_schema():
     columns = {row["name"] for row in conn.execute("PRAGMA table_info(riggers)").fetchall()}
     if "sms_consent" not in columns:
         conn.execute("ALTER TABLE riggers ADD COLUMN sms_consent INTEGER NOT NULL DEFAULT 0")
+        # Every row that already exists at this point was added back when checking the SMS
+        # consent box was a required part of signup, so backfill them as consented rather than
+        # silently losing that consent. Rows inserted from here on record their real choice.
+        conn.execute("UPDATE riggers SET sms_consent = 1")
         conn.commit()
 
     conn.close()
