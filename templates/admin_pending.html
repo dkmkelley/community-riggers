@@ -15,6 +15,7 @@
                 <tr>
                     <th>Name</th>
                     <th>Phone</th>
+                    <th>SMS</th>
                     <th>Affiliation</th>
                     <th>City</th>
                     <th>Submitted</th>
@@ -26,6 +27,13 @@
                 <tr>
                     <td>{{ rigger["name"] }}</td>
                     <td>{{ rigger["phone"] }}</td>
+                    <td>
+                        {% if rigger["sms_consent"] %}
+                            <span class="badge bg-success">Opted in</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Not opted in</span>
+                        {% endif %}
+                    </td>
                     <td>{{ rigger["affiliation"] or "—" }}</td>
                     <td>{{ rigger["city"] or "—" }}</td>
                     <td>{{ rigger["created_at"] }}</td>

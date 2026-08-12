@@ -37,10 +37,10 @@
             </div>
 
             <div class="form-check mb-3">
-                <input type="checkbox" class="form-check-input" id="sms_consent" name="sms_consent" required>
+                <input type="checkbox" class="form-check-input" id="sms_consent" name="sms_consent">
                 <label class="form-check-label" for="sms_consent">
                     {% if current_user %}
-                        I confirm this rigger has agreed to receive SMS text messages from Community
+                        This rigger has agreed to receive SMS text messages from Community
                         Riggers related to their availability, including their personal availability link
                         and occasional reminders.
                     {% else %}
@@ -52,6 +52,13 @@
                     <a href="{{ url_for('terms') }}" target="_blank" rel="noopener">Terms of Service</a>
                     and <a href="{{ url_for('privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.
                 </label>
+                <div class="form-text">
+                    {% if current_user %}
+                        Optional — this rigger can be added to the directory either way.
+                    {% else %}
+                        Optional — you can leave this unchecked and still be added to the directory.
+                    {% endif %}
+                </div>
             </div>
 
             <button type="submit" class="btn btn-success">

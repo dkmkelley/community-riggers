@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS riggers (
     city            TEXT,
     token           TEXT,
     status          TEXT NOT NULL DEFAULT 'pending',
+    sms_consent     INTEGER NOT NULL DEFAULT 0,
     last_toggled_at TEXT,
     created_at      TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at      TEXT NOT NULL DEFAULT (datetime('now'))

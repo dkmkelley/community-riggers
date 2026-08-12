@@ -10,9 +10,10 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
 
-from database import get_db, generate_token
+from database import get_db, generate_token, ensure_schema
 
 load_dotenv()
+ensure_schema()
 
 # Helper function to set the timezone to Pacific Time for all date operations instead of relying on server's timezone
 
@@ -177,7 +178,7 @@ def list_riggers():
     sort_by = request.args.get('sort_by', 'name')
     sort_dir = request.args.get('sort_dir', 'asc')
 
-    riggers = conn.execute("SELECT id, name, phone, affiliation, city, token FROM riggers WHERE status = 'approved'"
+    riggers = conn.execute("SELECT id, name, phone, affiliation, city, token, sms_consent FROM riggers WHERE status = 'approved'"
     ).fetchall()
 
     if sort_by == 'city':
@@ -208,17 +209,22 @@ def admin_send_sms():
     conn = get_db()
     placeholders = ",".join("?" * len(rigger_ids))
     riggers = conn.execute(
-        f"SELECT phone FROM riggers WHERE id IN ({placeholders})", rigger_ids
+        f"SELECT phone, sms_consent FROM riggers WHERE id IN ({placeholders})", rigger_ids
     ).fetchall()
     conn.close()
 
-    sent = sum(1 for r in riggers if send_sms(r["phone"], message))
-    failed = len(riggers) - sent
+    consented = [r for r in riggers if r["sms_consent"]]
+    skipped = len(riggers) - len(consented)
 
+    sent = sum(1 for r in consented if send_sms(r["phone"], message))
+    failed = len(consented) - sent
+
+    parts = [f"Sent to {sent} rigger(s)."]
     if failed:
-        flash(f"Sent to {sent} rigger(s). {failed} failed to send.")
-    else:
-        flash(f"Sent to {sent} rigger(s).")
+        parts.append(f"{failed} failed to send.")
+    if skipped:
+        parts.append(f"{skipped} skipped (no SMS consent on file).")
+    flash(" ".join(parts))
 
     return redirect(request.referrer or url_for("admin_availability"))
 
@@ -236,8 +242,7 @@ def add_rigger():
         if not name or not phone:
             return render_template("add_rigger.html", error="Name and phone are required.")
 
-        if not request.form.get("sms_consent"):
-            return render_template("add_rigger.html", error="You must agree to receive SMS text messages to be added to the directory.")
+        sms_consent = 1 if request.form.get("sms_consent") else 0
 
         digits = ''.join(filter(str.isdigit, phone))
         if len(digits) == 10:
@@ -251,8 +256,8 @@ def add_rigger():
 
         conn = get_db()
         conn.execute(
-            "INSERT INTO riggers (name, phone, affiliation, city, token) VALUES (?, ?, ?, ?, ?)",
-            (name, phone, affiliation or None, city or None, token)
+            "INSERT INTO riggers (name, phone, affiliation, city, token, sms_consent) VALUES (?, ?, ?, ?, ?, ?)",
+            (name, phone, affiliation or None, city or None, token, sms_consent)
         )
         conn.commit()
         conn.close()
@@ -301,11 +306,13 @@ def edit_rigger(id):
         else:
             return render_template("edit_rigger.html", rigger=rigger, error="Please enter a valid 10-digit phone number.")
 
+        sms_consent = 1 if request.form.get("sms_consent") else 0
+
         conn.execute(
             """UPDATE riggers
-               SET name = ?, phone = ?, affiliation = ?, city = ?, updated_at = datetime('now')
+               SET name = ?, phone = ?, affiliation = ?, city = ?, sms_consent = ?, updated_at = datetime('now')
                WHERE id = ?""",
-            (name, phone, affiliation or None, city or None, id)
+            (name, phone, affiliation or None, city or None, sms_consent, id)
         )
         conn.commit()
         conn.close()
@@ -370,7 +377,7 @@ def admin_availability():
     # If a date filter is applied, modify the query to only include riggers available on that date
     if date_filter:
         rows = conn.execute("""
-            SELECT r.id, r.name, r.phone, r.affiliation, r.city, r.token, r.last_toggled_at,
+            SELECT r.id, r.name, r.phone, r.affiliation, r.city, r.token, r.last_toggled_at, r.sms_consent,
                 MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_0,
                 MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_1,
                 MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_2,
@@ -386,7 +393,7 @@ def admin_availability():
         """, (*day_strs, date_filter,)).fetchall()
     else:
         rows = conn.execute("""
-            SELECT r.id, r.name, r.phone, r.affiliation, r.city, r.token, r.last_toggled_at,
+            SELECT r.id, r.name, r.phone, r.affiliation, r.city, r.token, r.last_toggled_at, r.sms_consent,
                 MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_0,
                 MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_1,
                 MAX(CASE WHEN a.date = ? THEN 1 ELSE 0 END) as day_2,
@@ -404,7 +411,8 @@ def admin_availability():
         riggers.append({
             "id": r["id"],
             "name": r["name"],
-            "phone": r["phone"],            
+            "phone": r["phone"],
+            "sms_consent": r["sms_consent"],
             "availability": [r["day_0"], r["day_1"], r["day_2"], r["day_3"], r["day_4"]],
             "token": r["token"],
             "last_toggled_at": datetime.strptime(r["last_toggled_at"], 
@@ -440,8 +448,7 @@ def admin_add_rigger():
         if not name or not phone:
             return render_template("add_rigger.html", error="Name and phone are required.")
 
-        if not request.form.get("sms_consent"):
-            return render_template("add_rigger.html", error="You must confirm this rigger has agreed to receive SMS text messages.")
+        sms_consent = 1 if request.form.get("sms_consent") else 0
 
         digits = ''.join(filter(str.isdigit, phone))
         if len(digits) == 10:
@@ -456,8 +463,8 @@ def admin_add_rigger():
 
         conn = get_db()
         conn.execute(
-            "INSERT INTO riggers (name, phone, affiliation, city, token) VALUES (?, ?, ?, ?, ?)",
-            (name, phone, affiliation or None, city or None, token)
+            "INSERT INTO riggers (name, phone, affiliation, city, token, sms_consent) VALUES (?, ?, ?, ?, ?, ?)",
+            (name, phone, affiliation or None, city or None, token, sms_consent)
         )
         conn.commit()
         conn.close()

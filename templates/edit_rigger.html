@@ -36,6 +36,14 @@
                        value="{{ rigger['city'] or '' }}">
             </div>
 
+            <div class="form-check mb-3">
+                <input type="checkbox" class="form-check-input" id="sms_consent" name="sms_consent"
+                       {% if rigger['sms_consent'] %}checked{% endif %}>
+                <label class="form-check-label" for="sms_consent">
+                    This rigger has agreed to receive SMS text messages from Community Riggers.
+                </label>
+            </div>
+
             <button type="submit" class="btn btn-primary">Save Changes</button>
             <a href="/riggers" class="btn btn-outline-secondary ms-2">Cancel</a>
         </form>
