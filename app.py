@@ -352,6 +352,7 @@ def admin_availability():
     conn = get_db()
     
     filter_day = request.args.get('filter_day', 'all') # Get the filter_day parameter from the query string, default to 'all'
+    sort_by = request.args.get('sort_by', 'name')
     sort_dir = request.args.get('sort_dir', 'asc')
 
     days = []
@@ -415,15 +416,19 @@ def admin_availability():
             "sms_consent": r["sms_consent"],
             "availability": [r["day_0"], r["day_1"], r["day_2"], r["day_3"], r["day_4"]],
             "token": r["token"],
-            "last_toggled_at": datetime.strptime(r["last_toggled_at"], 
-            "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc).astimezone(ZoneInfo("America/Los_Angeles")).strftime("%m/%d %I:%M%p") 
-            if r["last_toggled_at"] 
+            "last_toggled_at_raw": r["last_toggled_at"],
+            "last_toggled_at": datetime.strptime(r["last_toggled_at"],
+            "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc).astimezone(ZoneInfo("America/Los_Angeles")).strftime("%m/%d %I:%M%p")
+            if r["last_toggled_at"]
             else "Never"
         })
 
-    riggers = sorted(riggers, key=lambda r: r['name'].split()[-1].lower(), reverse=(sort_dir == 'desc')) # Sort by last name, case-insensitive
+    if sort_by == 'last_updated':
+        riggers = sorted(riggers, key=lambda r: r['last_toggled_at_raw'] or '', reverse=(sort_dir == 'desc')) # Never-updated riggers sort as the oldest possible timestamp
+    else:
+        riggers = sorted(riggers, key=lambda r: r['name'].split()[-1].lower(), reverse=(sort_dir == 'desc')) # Sort by last name, case-insensitive
     conn.close()
-    return render_template("admin_availability.html", riggers=riggers, days=days, filter_day=filter_day, sort_dir=sort_dir)
+    return render_template("admin_availability.html", riggers=riggers, days=days, filter_day=filter_day, sort_by=sort_by, sort_dir=sort_dir)
 
 
 # Admin view to see all riggers with status of 'pending'. Is public on dev server but should be protected in production.
