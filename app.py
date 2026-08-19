@@ -353,7 +353,9 @@ def admin_availability():
     
     filter_day = request.args.get('filter_day', 'all') # Get the filter_day parameter from the query string, default to 'all'
     sort_by = request.args.get('sort_by', 'name')
-    sort_dir = request.args.get('sort_dir', 'asc')
+    # Default direction depends on the field: A-Z for name, most-recently-updated-first for last_updated.
+    # Only falls back to this when sort_dir isn't explicitly in the URL (e.g. from the Name column header link).
+    sort_dir = request.args.get('sort_dir') or ('desc' if sort_by == 'last_updated' else 'asc')
 
     days = []
     for i in range(5):
