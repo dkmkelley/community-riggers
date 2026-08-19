@@ -42,6 +42,10 @@ def ensure_schema():
         conn.execute("UPDATE riggers SET sms_consent = 1")
         conn.commit()
 
+    if "last_toggled_at" not in columns:
+        conn.execute("ALTER TABLE riggers ADD COLUMN last_toggled_at TEXT")
+        conn.commit()
+
     conn.close()
 
 
