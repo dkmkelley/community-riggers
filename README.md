@@ -40,6 +40,7 @@ Community Riggers provides a voluntary, opt-in availability system where riggers
 
 - Python 3.13+
 - An Auth0 account with a Regular Web Application configured
+- A Twilio account for text-from-web functionality
 
 ### Installation
 
