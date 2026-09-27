@@ -5,7 +5,9 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1 class="mb-0">Rigger Directory</h1>
+    {% if is_superuser %}
     <a href="/admin/add" class="btn btn-success">Add Rigger</a>
+    {% endif %}
 </div>
 
 {% if riggers %}
@@ -42,7 +44,13 @@
                 {% for rigger in riggers %}
                 <tr>
                     <td><input type="checkbox" class="rigger-checkbox" name="rigger_ids" value="{{ rigger['id'] }}" form="bulk-send-form" aria-label="Select {{ rigger['name'] }}"></td>
-                    <td><a href="/availability/{{ rigger['token'] }}">{{ rigger["name"] | last_first }}</a></td>
+                    <td>
+                        {% if is_superuser %}
+                            <a href="/availability/{{ rigger['token'] }}">{{ rigger["name"] | last_first }}</a>
+                        {% else %}
+                            {{ rigger["name"] | last_first }}
+                        {% endif %}
+                    </td>
                     <td>{{ rigger["phone"] }}</td>
                     <td>
                         {% if rigger["sms_consent"] %}
@@ -56,17 +64,25 @@
                     <td>
                         <div class="d-flex flex-column gap-1">
                         {% if rigger["sms_consent"] %}
-                        <form method="POST" action="{{ url_for('admin_send_sms') }}">
-                            <input type="hidden" name="rigger_ids" value="{{ rigger['id'] }}">
-                            <input type="hidden" name="message" value="Your Personal Community Riggers Link: https://www.communityriggers.org/availability/{{ rigger['token'] }}">
+                        <form method="POST" action="{{ url_for('admin_send_link') }}">
+                            <input type="hidden" name="rigger_id" value="{{ rigger['id'] }}">
+                            <input type="hidden" name="kind" value="link">
                             <button type="submit" class="btn btn-outline-success btn-sm w-100">Send Link</button>
                         </form>
                         {% else %}
                         <button type="button" class="btn btn-outline-success btn-sm w-100" disabled title="No SMS consent on file">Send Link</button>
                         {% endif %}
+                        
+                        {% if is_superuser %}
                         <a href="sms:{{ rigger['phone'] }}?body=Your%20Personal%20Community%20Riggers%20Link%3A%20https%3A%2F%2Fwww.communityriggers.org%2Favailability%2F{{ rigger['token'] }}" class="btn btn-outline-secondary btn-sm">Text from Phone</a>
+                        {% else %}
+                        <a href="sms:{{ rigger['phone'] }}" class="btn btn-outline-secondary btn-sm">Text from Phone</a>
+                        {% endif %}
+
+                        {% if is_superuser %}
                         <a href="/riggers/{{ rigger['id'] }}/edit" class="btn btn-outline-primary btn-sm">Edit</a>
                         <a href="/riggers/{{ rigger['id'] }}/delete" class="btn btn-outline-danger btn-sm">Delete</a>
+                        {% endif %}
                         </div>
                     </td>
                 </tr>

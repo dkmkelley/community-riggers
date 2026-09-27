@@ -38,6 +38,7 @@
                     <td>{{ rigger["city"] or "—" }}</td>
                     <td>{{ rigger["created_at"] }}</td>
                     <td>
+                        {% if is_superuser %}
                         <form method="POST" action="/admin/pending/{{ rigger['id'] }}/approve"
                               class="d-inline">
                             <button type="submit" class="btn btn-success btn-sm">Approve</button>
@@ -48,6 +49,7 @@
                             onsubmit="return confirm('Reject and delete ' + this.dataset.name + '?')">
                             <button type="submit" class="btn btn-danger btn-sm">Reject</button>
                         </form>
+                        {% endif %}
                     </td>
                 </tr>
                 {% endfor %}

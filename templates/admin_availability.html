@@ -60,7 +60,12 @@
             {% for rigger in riggers %}
             <tr>
                 <td><input type="checkbox" class="rigger-checkbox" name="rigger_ids" value="{{ rigger.id }}" form="bulk-send-form" aria-label="Select {{ rigger.name }}"></td>
-                <td><a href="/availability/{{ rigger.token }}">{{ rigger.name | last_first }}</a>
+                <td>
+                    {% if is_superuser %}
+                        <a href="/availability/{{ rigger.token }}">{{ rigger.name | last_first }}</a>
+                    {% else %}
+                        {{ rigger.name | last_first }}
+                    {% endif %}
                     <div><small class="text-muted" style="font-size: 0.7rem;">Updated: {{ rigger.last_toggled_at }}</small></div>
                 </td>
                 {% for avail in rigger.availability %}
@@ -82,15 +87,21 @@
                 <td>
                     <div class="d-flex flex-column gap-1">
                         {% if rigger.sms_consent %}
-                        <form method="POST" action="{{ url_for('admin_send_sms') }}">
-                            <input type="hidden" name="rigger_ids" value="{{ rigger.id }}">
-                            <input type="hidden" name="message" value="Update your availability at Community Riggers: https://www.communityriggers.org/availability/{{ rigger.token }}">
+                        <form method="POST" action="{{ url_for('admin_send_link') }}">
+                            <input type="hidden" name="rigger_id" value="{{ rigger.id }}">
+                            <input type="hidden" name="kind" value="reminder">
                             <button type="submit" class="btn btn-outline-success btn-sm w-100">Send Reminder</button>
                         </form>
                         {% else %}
                         <button type="button" class="btn btn-outline-success btn-sm w-100" disabled title="No SMS consent on file">Send Reminder</button>
                         {% endif %}
+
+                                                {% if is_superuser %}
                         <a href="sms:{{ rigger.phone }}?body=Update%20your%20availability%20at%20Community%20Riggers%3A%20https%3A%2F%2Fwww.communityriggers.org%2Favailability%2F{{ rigger.token }}" class="btn btn-outline-secondary btn-sm">Text from Phone</a>
+                        {% else %}
+                        <a href="sms:{{ rigger.phone }}" class="btn btn-outline-secondary btn-sm">Text from Phone</a>
+                        {% endif %}
+
                         <a href="tel:{{ rigger.phone }}" class="btn btn-outline-primary btn-sm w-100">Call</a>
                     </div>
                 </td>

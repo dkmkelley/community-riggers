@@ -91,10 +91,31 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+SUPERUSER_SUB = os.getenv("SUPERUSER_SUB")
+
+# Check if the logged-in user is the superuser
+def is_superuser():
+    user = session.get("user")
+    if not SUPERUSER_SUB or not user:
+        return False
+    return user.get("userinfo", {}).get("sub") == SUPERUSER_SUB
+
+# Decorator to require superuser privileges for certain routes
+def superuser_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not is_admin():
+            return redirect(url_for("login"))
+        if not is_superuser():
+            flash("You don't have permission to do that.")
+            return redirect(url_for("admin_availability"))
+        return f(*args, **kwargs)
+    return decorated_function
+
 # Inject the current user into the template context for use in templates
 @app.context_processor
 def inject_user():
-    return dict(current_user=session.get('user'))
+    return dict(current_user=session.get('user'), is_superuser=is_superuser())
 
 
 # Filter function to normalize phone numbers to a standard format (XXX) XXX-XXXX
@@ -178,21 +199,41 @@ def list_riggers():
     sort_by = request.args.get('sort_by', 'name')
     sort_dir = request.args.get('sort_dir', 'asc')
 
-    riggers = conn.execute("SELECT id, name, phone, affiliation, city, token, sms_consent FROM riggers WHERE status = 'approved'"
+    rows = conn.execute("SELECT id, name, phone, affiliation, city, token, sms_consent FROM riggers WHERE status = 'approved'"
     ).fetchall()
 
     if sort_by == 'city':
-        riggers = sorted(riggers, key=lambda r: (r['city'] or '').lower(), reverse=(sort_dir == 'desc'))
+        rows = sorted(rows, key=lambda r: (r['city'] or '').lower(), reverse=(sort_dir == 'desc'))
     else:
-        riggers = sorted(riggers, key=lambda r: r['name'].split()[-1].lower(), reverse=(sort_dir == 'desc'))  # Sort by last name, case-insensitive
+        rows = sorted(rows, key=lambda r: r['name'].split()[-1].lower(), reverse=(sort_dir == 'desc'))  # Sort by last name, case-insensitive
 
     conn.close()
+
+    # A rigger's token is their only credential: anyone holding it can edit that
+    # rigger via /availability/<token>/edit, with no login required. Tokens are
+    # therefore withheld from standard admins, who would otherwise be able to
+    # read them out of the page source and bypass the superuser-only edit and
+    # delete routes entirely. Any future page that renders a token must do the
+    # same or this protection is void.
+    su = is_superuser()
+    riggers = [
+        {
+            "id": r["id"],
+            "name": r["name"],
+            "phone": r["phone"],
+            "affiliation": r["affiliation"],
+            "city": r["city"],
+            "sms_consent": r["sms_consent"],
+            "token": r["token"] if su else None,
+        }
+        for r in rows
+    ]
 
     return render_template("riggers.html", riggers=riggers, sort_by=sort_by, sort_dir=sort_dir)
 
 
-# Sends an SMS message (via Twilio) to one or more selected riggers. Used for both single-rigger
-# canned messages (e.g. "Send Link" buttons) and the multi-select bulk message form.
+# Sends an SMS message (via Twilio) to one or more selected riggers. Used by the
+# multi-select bulk message form, where the admin composes the body themselves.
 @app.route("/admin/send_sms", methods=["POST"])
 @admin_required
 def admin_send_sms():
@@ -225,6 +266,43 @@ def admin_send_sms():
     if skipped:
         parts.append(f"{skipped} skipped (no SMS consent on file).")
     flash(" ".join(parts))
+
+    return redirect(request.referrer or url_for("admin_availability"))
+
+
+# Sends a rigger their own personal availability link via Twilio. The token is
+# looked up server-side from the rigger id, so it never appears in any
+# admin-facing page or form. This is what lets standard admins send riggers
+# their links without ever handling a token themselves.
+@app.route("/admin/send_link", methods=["POST"])
+@admin_required
+def admin_send_link():
+    rigger_id = request.form.get("rigger_id")
+    kind = request.form.get("kind", "link")
+
+    conn = get_db()
+    rigger = conn.execute(
+        "SELECT name, phone, token, sms_consent FROM riggers WHERE id = ?", (rigger_id,)
+    ).fetchone()
+    conn.close()
+
+    if rigger is None:
+        flash("Rigger not found.")
+        return redirect(request.referrer or url_for("admin_availability"))
+    if not rigger["sms_consent"]:
+        flash("That rigger has not opted in to SMS.")
+        return redirect(request.referrer or url_for("admin_availability"))
+
+    url = f"https://www.communityriggers.org/availability/{rigger['token']}"
+    if kind == "reminder":
+        body = f"Update your availability at Community Riggers: {url}"
+    else:
+        body = f"Your Personal Community Riggers Link: {url}"
+
+    if send_sms(rigger["phone"], body):
+        flash(f"Link sent to {rigger['name']}.")
+    else:
+        flash(f"Failed to send to {rigger['name']}.")
 
     return redirect(request.referrer or url_for("admin_availability"))
 
@@ -278,7 +356,7 @@ def add_rigger():
 
 # Route to edit an existing rigger
 @app.route("/riggers/<int:id>/edit", methods=["GET", "POST"])
-@admin_required
+@superuser_required
 def edit_rigger(id):
     conn = get_db()
     rigger = conn.execute(
@@ -324,7 +402,7 @@ def edit_rigger(id):
 
 # Route to delete a rigger
 @app.route("/riggers/<int:id>/delete", methods=["GET", "POST"])
-@admin_required
+@superuser_required
 def delete_rigger(id):
     conn = get_db()
     rigger = conn.execute(
@@ -408,7 +486,9 @@ def admin_availability():
             GROUP BY r.id
         """, (*day_strs,)).fetchall()
 
-    # Process the rows into a list of riggers with their availability
+    # Process the rows into a list of riggers with their availability.
+    # Tokens are withheld from standard admins: see the note in list_riggers().
+    su = is_superuser()
     riggers = []
     for r in rows:
         riggers.append({
@@ -417,7 +497,7 @@ def admin_availability():
             "phone": r["phone"],
             "sms_consent": r["sms_consent"],
             "availability": [r["day_0"], r["day_1"], r["day_2"], r["day_3"], r["day_4"]],
-            "token": r["token"],
+            "token": r["token"] if su else None,
             "last_toggled_at_raw": r["last_toggled_at"],
             "last_toggled_at": datetime.strptime(r["last_toggled_at"],
             "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc).astimezone(ZoneInfo("America/Los_Angeles")).strftime("%m/%d %I:%M%p")
@@ -444,7 +524,7 @@ def admin_pending():
 
 # Admin route to add a rigger on their behalf
 @app.route("/admin/add", methods=["GET", "POST"])
-@admin_required
+@superuser_required
 def admin_add_rigger():
     if request.method == "POST":
         name = request.form.get("name", "").strip()
@@ -483,7 +563,7 @@ def admin_add_rigger():
 
 # Admin approval action to set a rigger's status to 'approved'. Is public on dev server but should be protected in production.
 @app.route("/admin/pending/<int:id>/approve", methods=["POST"])
-@admin_required
+@superuser_required
 def approve_rigger(id):
     conn = get_db()
     conn.execute(
@@ -497,7 +577,7 @@ def approve_rigger(id):
 
 # Admin rejection route. Also removes the rigger from the database. Is public on dev server but should be protected in production.
 @app.route("/admin/pending/<int:id>/reject", methods=["POST"])
-@admin_required
+@superuser_required
 def reject_rigger(id):
     conn = get_db()
     conn.execute("DELETE FROM riggers WHERE id = ?", (id,))
