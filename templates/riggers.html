@@ -30,7 +30,7 @@
                         </a>
                     </th>
                     <th>Phone</th>
-                    <th>SMS</th>
+                    <th class="d-none d-md-table-cell">SMS</th>
                     <th>Local</th>
                     <th>
                         <a href="{{ url_for('list_riggers', sort_by='city', sort_dir='desc' if (sort_by == 'city' and sort_dir == 'asc') else 'asc') }}" class="text-white text-decoration-none">
@@ -52,7 +52,7 @@
                         {% endif %}
                     </td>
                     <td>{{ rigger["phone"] }}</td>
-                    <td>
+                    <td class="d-none d-md-table-cell">
                         {% if rigger["sms_consent"] %}
                             <span class="badge bg-success">Opted in</span>
                         {% else %}
