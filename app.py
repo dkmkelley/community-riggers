@@ -12,6 +12,8 @@ from twilio.base.exceptions import TwilioRestException
 
 from database import get_db, generate_token, ensure_schema
 
+from markupsafe import Markup, escape
+
 load_dotenv()
 ensure_schema()
 
@@ -137,7 +139,9 @@ def last_first(name):
     parts = name.split()
     if len(parts) < 2:
         return name
-    return f"{parts[-1]}, {' '.join(parts[:-1])}"
+    last = escape(parts[-1])
+    first = escape(' '.join(parts[:-1]))
+    return Markup(f"{last}, <br>{first}")
 
 
 # Default route. Currently redirects to the admin availability page if logged in, otherwise shows a landing page
