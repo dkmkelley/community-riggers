@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS riggers (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_riggers_token ON riggers(token);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_riggers_phone ON riggers(phone);
 
 CREATE TABLE IF NOT EXISTS availability (
     id          INTEGER PRIMARY KEY,

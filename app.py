@@ -66,6 +66,19 @@ def to_e164(phone):
     return None
 
 
+# Normalizes a submitted phone number to the canonical stored format
+# (XXX) XXX-XXXX. Returns None if it isn't a valid 10-digit US number.
+# Phone is the identity key for a rigger (unique index in schema.sql), so every
+# write path must normalize the same way or duplicates slip past the check.
+def normalize_phone(phone):
+    digits = ''.join(filter(str.isdigit, phone))
+    if len(digits) == 10:
+        return f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
+    elif len(digits) == 11 and digits[0] == '1':
+        return f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
+    return None
+
+
 # Sends a single SMS via Twilio. Returns True on success, False if the send failed.
 def send_sms(phone, body):
     to_number = to_e164(phone)
@@ -133,7 +146,10 @@ def format_phone(phone):
     return phone
 
 
-# Filter function to display a full name as "Last, First"
+# Filter function to display a name as "Last," with the first name on a second
+# line, which keeps the name column narrow enough to fit on a phone screen.
+# Parts are escaped individually because the result is marked safe HTML and
+# names come from a public form.
 @app.template_filter("last_first")
 def last_first(name):
     parts = name.split()
@@ -141,7 +157,7 @@ def last_first(name):
         return name
     last = escape(parts[-1])
     first = escape(' '.join(parts[:-1]))
-    return Markup(f"{last}, <br>{first}")
+    return Markup(f"{last},<br>{first}")
 
 
 # Default route. Currently redirects to the admin availability page if logged in, otherwise shows a landing page
@@ -326,17 +342,27 @@ def add_rigger():
 
         sms_consent = 1 if request.form.get("sms_consent") else 0
 
-        digits = ''.join(filter(str.isdigit, phone))
-        if len(digits) == 10:
-            phone = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
-        elif len(digits) == 11 and digits[0] == '1':
-            phone = f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
-        else:
+        phone = normalize_phone(phone)
+        if phone is None:
             return render_template("add_rigger.html", error="Please enter a valid 10-digit phone number.")
 
         token = generate_token()
 
         conn = get_db()
+
+        # Phone is the identity key for a rigger. Enforced by a unique index in
+        # schema.sql; this check exists to give a usable error instead of a 500.
+        existing = conn.execute(
+            "SELECT id FROM riggers WHERE phone = ?", (phone,)
+        ).fetchone()
+        if existing:
+            conn.close()
+            return render_template(
+                "add_rigger.html",
+                error="That phone number is already registered. "
+                      "Text (415) 319-6609 if you need your link resent."
+            )
+
         conn.execute(
             "INSERT INTO riggers (name, phone, affiliation, city, token, sms_consent) VALUES (?, ?, ?, ?, ?, ?)",
             (name, phone, affiliation or None, city or None, token, sms_consent)
@@ -379,14 +405,22 @@ def edit_rigger(id):
         if not name or not phone:
             conn.close()
             return render_template("edit_rigger.html", rigger=rigger, error="Name and phone are required.")
-        
-        digits = ''.join(filter(str.isdigit, phone))
-        if len(digits) == 10:
-            phone = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
-        elif len(digits) == 11 and digits[0] == '1':
-            phone = f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
-        else:
+
+        phone = normalize_phone(phone)
+        if phone is None:
+            conn.close()
             return render_template("edit_rigger.html", rigger=rigger, error="Please enter a valid 10-digit phone number.")
+
+        # Phone is unique across riggers, so changing one to a number another
+        # rigger already holds would raise an IntegrityError from the index.
+        # Excluding this rigger's own id lets them save without changing phone.
+        clash = conn.execute(
+            "SELECT id FROM riggers WHERE phone = ? AND id != ?", (phone, id)
+        ).fetchone()
+        if clash:
+            conn.close()
+            return render_template("edit_rigger.html", rigger=rigger,
+                       error="Another rigger in the directory already has that phone number.")
 
         sms_consent = 1 if request.form.get("sms_consent") else 0
 
@@ -541,18 +575,26 @@ def admin_add_rigger():
 
         sms_consent = 1 if request.form.get("sms_consent") else 0
 
-        digits = ''.join(filter(str.isdigit, phone))
-        if len(digits) == 10:
-            phone = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
-        elif len(digits) == 11 and digits[0] == '1':
-            phone = f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
-        else:
+        phone = normalize_phone(phone)
+        if phone is None:
             return render_template("add_rigger.html",
                                    error="Please enter a valid 10-digit phone number.")
 
         token = generate_token()
 
         conn = get_db()
+
+        # Same unique-phone constraint as the public signup route.
+        existing = conn.execute(
+            "SELECT id FROM riggers WHERE phone = ?", (phone,)
+        ).fetchone()
+        if existing:
+            conn.close()
+            return render_template(
+                "add_rigger.html",
+                error="A rigger with that phone number is already in the directory."
+            )
+
         conn.execute(
             "INSERT INTO riggers (name, phone, affiliation, city, token, sms_consent) VALUES (?, ?, ?, ?, ?, ?)",
             (name, phone, affiliation or None, city or None, token, sms_consent)
@@ -689,14 +731,21 @@ def edit_own_info(token):
             return render_template("edit_own_info.html", rigger=rigger,
                        error="Name and phone are required.")
 
-        digits = ''.join(filter(str.isdigit, phone))
-        if len(digits) == 10:
-            phone = f"({digits[:3]}) {digits[3:6]}-{digits[6:]}"
-        elif len(digits) == 11 and digits[0] == '1':
-            phone = f"({digits[1:4]}) {digits[4:7]}-{digits[7:]}"
-        else:
+        phone = normalize_phone(phone)
+        if phone is None:
+            conn.close()
             return render_template("edit_own_info.html", rigger=rigger,
                        error="Please enter a valid 10-digit US phone number.")
+
+        # Phone is unique across riggers. Excluding this rigger's own id lets
+        # them save other fields without changing their number.
+        clash = conn.execute(
+            "SELECT id FROM riggers WHERE phone = ? AND id != ?", (phone, rigger["id"])
+        ).fetchone()
+        if clash:
+            conn.close()
+            return render_template("edit_own_info.html", rigger=rigger,
+                       error="That phone number is already registered to another rigger.")
 
         conn.execute(
             """UPDATE riggers
